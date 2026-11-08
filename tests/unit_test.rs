@@ -99,8 +99,9 @@ mod tests {
 
     #[test]
     fn test_hudsucker_ca_generation() {
-        let _ca = wiretap::proxy::build_ca();
-        // CA should be generated successfully without panic
+        let (_ca, pem) = wiretap::proxy::build_ca();
+        assert!(pem.contains("BEGIN CERTIFICATE"));
+        assert!(pem.contains("END CERTIFICATE"));
     }
 
     #[tokio::test]
@@ -631,6 +632,7 @@ mod tests {
             target_base_url: target_holder.clone(),
             config: cfg_holder.clone(),
             config_path: test_config_path.to_string_lossy().to_string(),
+            ca_cert_pem: std::sync::Arc::new(tokio::sync::RwLock::new("test-ca-pem".to_string())),
         };
         let app = create_web_router(state);
 
@@ -688,6 +690,28 @@ mod tests {
 
         // Clean up temp file
         let _ = std::fs::remove_file(test_config_path);
+    }
+
+    #[tokio::test]
+    async fn test_port_scanner_api() {
+        use wiretap::scanner::{probe_port, scan_ports_list};
+
+        // Bind an ephemeral local TCP port
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let open_port = listener.local_addr().unwrap().port();
+
+        // 1. Probe the open port directly
+        let res = probe_port(open_port, false).await;
+        assert!(res.is_some(), "Open port must be detected");
+        let scanned = res.unwrap();
+        assert_eq!(scanned.port, open_port);
+        assert!(scanned.is_open);
+
+        // 2. Scan a list containing the open port and a non-open port
+        let closed_port = 59999;
+        let results = scan_ports_list(vec![open_port, closed_port], 10).await;
+        assert!(results.iter().any(|p| p.port == open_port), "Open port must be in results");
+        assert!(!results.iter().any(|p| p.port == closed_port), "Closed port must not be in results");
     }
 }
 

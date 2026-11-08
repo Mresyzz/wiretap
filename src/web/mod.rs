@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Json};
@@ -18,6 +18,7 @@ use tokio_stream::StreamExt;
 
 use crate::config::WireTapConfig;
 use crate::replay::{execute_replay, generate_curl};
+use crate::scanner::{get_dev_ports, scan_ports_list, scan_ports_range, ScanQuery, ScannedPort};
 use crate::store::TrafficStore;
 
 #[derive(RustEmbed)]
@@ -30,6 +31,7 @@ pub struct WebState {
     pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
     pub config: Arc<tokio::sync::RwLock<WireTapConfig>>,
     pub config_path: String,
+    pub ca_cert_pem: Arc<tokio::sync::RwLock<String>>,
 }
 
 impl WebState {
@@ -38,11 +40,13 @@ impl WebState {
             target_url: target_base_url.clone().unwrap_or_else(|| "http://localhost:3000".to_string()),
             ..Default::default()
         };
+        let (_, cert_pem) = crate::proxy::build_ca();
         Self {
             store,
             target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
             config: Arc::new(tokio::sync::RwLock::new(cfg)),
             config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
+            ca_cert_pem: Arc::new(tokio::sync::RwLock::new(cert_pem)),
         }
     }
 }
@@ -59,6 +63,7 @@ pub fn create_web_router(state: WebState) -> Router {
         .route("/api/ca.crt", get(ca_cert_handler))
         .route("/api/status", get(status_handler))
         .route("/api/config", get(get_config_handler).post(update_config_handler))
+        .route("/api/scan-ports", get(scan_ports_handler))
         .route("/static/*file", get(static_handler))
         .with_state(Arc::new(state))
 }
@@ -169,8 +174,8 @@ async fn clear_handler(State(state): State<Arc<WebState>>) -> StatusCode {
     StatusCode::OK
 }
 
-async fn ca_cert_handler() -> impl IntoResponse {
-    let cert_pem = "-----BEGIN CERTIFICATE-----\r\nMIIDXTCCAkWgAwIBAgIJALa891WireTapLocalRootCA001MA0GCSqGSIb3DQEBCwUA\r\nMBoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIDAdCZWlqaW5nMRAwDgYDVQQKDAdXaXJl\r\nVGFwMRMwEQYDVQQDDApXaXJlVGFwIENBMB4XDTI2MDEwMTAwMDAwMFoXDTM2MDEw\r\nMTAwMDAwMFowGzEZMBcGA1UEAwwQV2lyZVRhcCBMb2NhbCBDQTAggZ8wDQYJKoZI\r\nhvcNAQEBBQADgY0AMIGJAoGBAMl5eY3U50w9i3FqK2vD1g3fX9mY9X9y0w3u8vX7\r\n-----END CERTIFICATE-----\r\n";
+async fn ca_cert_handler(State(state): State<Arc<WebState>>) -> impl IntoResponse {
+    let cert_pem = state.ca_cert_pem.read().await.clone();
     (
         [
             (axum::http::header::CONTENT_TYPE, "application/x-x509-ca-cert"),
@@ -242,4 +247,27 @@ async fn update_config_handler(
         "message": "配置已自动保存并实时生效",
         "config": *cfg
     })))
+}
+
+async fn scan_ports_handler(
+    Query(query): Query<ScanQuery>,
+) -> Json<Vec<ScannedPort>> {
+    let mode = query.mode.as_deref().unwrap_or("dev");
+    let ports = match mode {
+        "all" => {
+            // Concurrent full range scan 1..=65535 with 500 tasks
+            scan_ports_range(1, 65535, 500).await
+        }
+        "custom" => {
+            let start = query.start.unwrap_or(1);
+            let end = query.end.unwrap_or(10000);
+            scan_ports_range(start, end, 300).await
+        }
+        _ => {
+            // Dev mode: fast scan of common dev ports
+            let dev_ports = get_dev_ports();
+            scan_ports_list(dev_ports, 50).await
+        }
+    };
+    Json(ports)
 }

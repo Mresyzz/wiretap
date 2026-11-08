@@ -212,6 +212,10 @@
       0% { transform: scale(0.75); opacity: 0.75; }
       100% { transform: scale(1.9); opacity: 0; }
     }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
     .divider-v {
       width: 1px;
@@ -1361,8 +1365,11 @@
       <section id="page-breakpoints" class="page-view hidden">
         <div class="standalone-container">
           <div class="page-header-row">
-            <h2 class="page-heading">断点拦截规则</h2>
-            <button onclick="openAddBpModal()" class="btn btn-primary tactile">+ 新增拦截规则</button>
+            <div>
+              <h2 class="page-heading">流量关注与规则拦截</h2>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">匹配特定请求特征并在控制台与灵动岛高亮提醒，便于追踪与一键重放</div>
+            </div>
+            <button onclick="openAddBpModal()" class="btn btn-primary tactile">+ 新增关注规则</button>
           </div>
 
           <div class="card-box">
@@ -1379,7 +1386,10 @@
       <section id="page-mock" class="page-view hidden">
         <div class="standalone-container">
           <div class="page-header-row">
-            <h2 class="page-heading">本地 Mock 规则</h2>
+            <div>
+              <h2 class="page-heading">本地 Mock 规则</h2>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">预置静态响应规则表 (开发中特性：规则已持久化保存)</div>
+            </div>
             <button onclick="addMockRule()" class="btn btn-primary tactile">+ 新增 Mock</button>
           </div>
 
@@ -1538,6 +1548,41 @@
             <div id="settings-save-badge" class="status-pill mono" style="gap:6px;display:inline-flex;align-items:center;">
               <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10B981;"></span>
               <span>配置已同步</span>
+            </div>
+          </div>
+
+          <!-- 本地活跃端口雷达扫描 (支持全端口扫描) -->
+          <div class="card-box" style="margin-bottom:20px;">
+            <div class="card-box-header">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+                <span style="font-weight:600;">本地活跃服务端口雷达 (Port Radar)</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="segmented-track" style="padding:2px;">
+                  <button type="button" id="scan-mode-dev" class="segmented-btn active" onclick="setScanMode('dev')" style="padding:3px 10px;font-size:11px;">⚡ 常用开发端口</button>
+                  <button type="button" id="scan-mode-all" class="segmented-btn" onclick="setScanMode('all')" style="padding:3px 10px;font-size:11px;">🌐 全端口扫描 (1-65535)</button>
+                </div>
+                <button type="button" id="btn-start-scan" onclick="triggerPortScan()" class="btn btn-sm btn-primary tactile" style="gap:5px;">
+                  <svg id="scan-radar-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                  <span id="scan-btn-text">立即扫描</span>
+                </button>
+              </div>
+            </div>
+            <div style="padding:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div style="font-size:12px;color:var(--text-secondary);">
+                  自动并发探测本机所有开放监听的端口并识别 HTTP 服务协议，点击任意端口即可一键绑定为上游目标或监听端口。
+                </div>
+                <div id="scan-summary-badge" class="status-pill mono hidden" style="font-size:11px;"></div>
+              </div>
+
+              <!-- 扫描结果容器 -->
+              <div id="scan-results-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:10px;">
+                <div style="grid-column: 1 / -1; padding: 18px 0; text-align: center; color: var(--text-tertiary); font-size: 12.5px;">
+                  点击右上角「立即扫描」探测本机正在运行的 Web 服务与监听端口
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2981,6 +3026,100 @@
         max_history: 1000
       });
       onSettingsInputChanged();
+    }
+
+    // --- Port Radar & Scanner ---
+    let currentScanMode = 'dev';
+    let isScanning = false;
+
+    function setScanMode(mode) {
+      currentScanMode = mode;
+      const devBtn = document.getElementById('scan-mode-dev');
+      const allBtn = document.getElementById('scan-mode-all');
+      if (devBtn) devBtn.classList.toggle('active', mode === 'dev');
+      if (allBtn) allBtn.classList.toggle('active', mode === 'all');
+    }
+
+    async function triggerPortScan() {
+      if (isScanning) return;
+      isScanning = true;
+
+      const btnText = document.getElementById('scan-btn-text');
+      const radarIcon = document.getElementById('scan-radar-icon');
+      const resultsContainer = document.getElementById('scan-results-list');
+      const summaryBadge = document.getElementById('scan-summary-badge');
+
+      if (btnText) btnText.textContent = currentScanMode === 'all' ? '全端口扫描中...' : '扫描中...';
+      if (radarIcon) radarIcon.style.animation = 'spin 0.8s linear infinite';
+      if (resultsContainer) {
+        resultsContainer.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 24px 0; text-align: center; color: var(--text-secondary); font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div style="width:20px;height:20px;border:2px solid var(--border-color);border-top-color:var(--accent-black);border-radius:50%;animation:spin 0.6s linear infinite;"></div>
+            <span>正在并发探测本机 ${currentScanMode === 'all' ? '全部 65535 个端口' : '常用开发服务端口'}...</span>
+          </div>
+        `;
+      }
+
+      try {
+        const startTime = performance.now();
+        const res = await fetch(`/api/scan-ports?mode=${currentScanMode}`);
+        const duration = Math.round(performance.now() - startTime);
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const ports = await res.json();
+
+        if (summaryBadge) {
+          summaryBadge.classList.remove('hidden');
+          summaryBadge.textContent = `发现 ${ports.length} 个活跃端口 (${duration}ms)`;
+        }
+
+        if (!ports || ports.length === 0) {
+          if (resultsContainer) {
+            resultsContainer.innerHTML = `
+              <div style="grid-column: 1 / -1; padding: 18px 0; text-align: center; color: var(--text-tertiary); font-size: 12.5px;">
+                未探测到处于监听状态的活跃端口
+              </div>
+            `;
+          }
+        } else {
+          if (resultsContainer) {
+            resultsContainer.innerHTML = ports.map(p => {
+              const bannerText = p.banner ? p.banner.replace(/^HTTP\/1\.[01]\s*/, '') : '';
+              return `
+                <div class="card-box" style="padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg-secondary);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span style="font-weight:700;font-size:13.5px;" class="mono">:${p.port}</span>
+                      <span class="status-pill mono" style="font-size:10px;padding:2px 6px;${p.is_http ? 'color:#059669;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);' : 'color:#6B7280;background:rgba(107,114,128,0.1);'}">
+                        ${p.is_http ? 'HTTP' : 'TCP'}
+                      </span>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-tertiary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.banner || '')}">${escapeHtml(bannerText)}</span>
+                  </div>
+                  <div style="display:flex;gap:6px;justify-content:flex-end;">
+                    <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;" onclick="quickSelectTarget('http://localhost:${p.port}')">设为上游目标</button>
+                    <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;" onclick="quickSelectPort('listen', ${p.port})">设为代理端口</button>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+        showToast(`已找到 ${ports.length} 个本地活跃端口`);
+      } catch (err) {
+        if (resultsContainer) {
+          resultsContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 18px 0; text-align: center; color: #EF4444; font-size: 12.5px;">
+              扫描失败: ${escapeHtml(err.message)}
+            </div>
+          `;
+        }
+        showToast('扫描失败: ' + err.message);
+      } finally {
+        isScanning = false;
+        if (btnText) btnText.textContent = '立即扫描';
+        if (radarIcon) radarIcon.style.animation = '';
+      }
     }
 
     window.onload = function () {

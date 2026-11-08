@@ -111,7 +111,7 @@ cargo install --path .
 ```
 
 ### Pre-built Binaries
-Download the standalone binary for your architecture from [Releases](https://github.com/your-org/wiretap/releases):
+Download pre-built standalone binaries directly from the repository's GitHub Releases tab:
 - `wiretap-linux-x86_64`
 - `wiretap-darwin-arm64` (Apple Silicon)
 - `wiretap-windows-x86_64.exe`

@@ -6,14 +6,14 @@ use colored::*;
 use wiretap::config::{WireTapConfig, DEFAULT_CONFIG_FILE};
 use wiretap::demo;
 use wiretap::model;
-use wiretap::proxy::start_hudsucker_proxy;
+use wiretap::proxy::{build_ca, start_hudsucker_proxy};
 use wiretap::store::TrafficStore;
 use wiretap::web::{create_web_router, WebState};
 
 #[derive(Parser, Debug)]
 #[command(
     name = "wiretap",
-    author = "WireTap Contributors",
+    author = "WireTap Maintainers",
     version = "0.1.0",
     about = "Zero-dependency, single-binary API traffic inspector and replay studio",
     long_about = "WireTap intercepts, inspects, and replays HTTP API traffic in real-time with an embedded zero-config web studio. A local-first, privacy-respecting alternative to bloated SaaS tools."
@@ -172,6 +172,9 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
     let shared_target = Arc::new(RwLock::new(Some(target_base_url.clone())));
     let shared_config = Arc::new(RwLock::new(config));
 
+    let (ca_authority, ca_cert_pem) = build_ca();
+    let shared_ca_cert = Arc::new(RwLock::new(ca_cert_pem));
+
     println!("{}", "\n========================================================".dimmed());
     println!("{}", "  📡 WIRETAP STUDIO -- ACTIVE PROXY ENGINE".bold().cyan());
     println!("{}", "========================================================".dimmed());
@@ -186,6 +189,7 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
         target_base_url: shared_target.clone(),
         config: shared_config.clone(),
         config_path: DEFAULT_CONFIG_FILE.to_string(),
+        ca_cert_pem: shared_ca_cert,
     };
     let web_router = create_web_router(web_state);
     let web_addr = format!("0.0.0.0:{}", ui_port);
@@ -202,7 +206,7 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
 
     // 2. 启动基于 Hudsucker 的核心代理服务
     println!("{}", "  🚀 Ready for traffic! Powered by Hudsucker MITM Engine.".green().bold());
-    if let Err(e) = start_hudsucker_proxy(proxy_port, shared_target, store).await {
+    if let Err(e) = start_hudsucker_proxy(proxy_port, shared_target, store, ca_authority).await {
         eprintln!("Proxy server encountered error: {}", e);
     }
 }
@@ -228,11 +232,13 @@ async fn start_mock(listen_str: String, ui_port: u16, max_history: usize) {
     println!("  {} All incoming requests will be recorded and return 200 OK\n", "Info:           ".dimmed());
 
     // 1. 启动 WebUI 服务
+    let (_, ca_cert_pem) = build_ca();
     let web_state = WebState {
         store: store.clone(),
         target_base_url: shared_target,
         config: shared_config,
         config_path: DEFAULT_CONFIG_FILE.to_string(),
+        ca_cert_pem: Arc::new(RwLock::new(ca_cert_pem)),
     };
     let web_router = create_web_router(web_state);
     let web_addr = format!("0.0.0.0:{}", ui_port);

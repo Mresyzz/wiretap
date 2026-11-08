@@ -26,11 +26,13 @@ pub async fn run_demo(web_port: u16) {
         ui_port: web_port,
         max_history: 1000,
     };
+    let (_, ca_pem) = crate::proxy::build_ca();
     let web_state = WebState {
         store: store.clone(),
         target_base_url: std::sync::Arc::new(tokio::sync::RwLock::new(Some("http://demo.internal.api".to_string()))),
         config: std::sync::Arc::new(tokio::sync::RwLock::new(cfg)),
         config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
+        ca_cert_pem: std::sync::Arc::new(tokio::sync::RwLock::new(ca_pem)),
     };
     let app = create_web_router(web_state);
     let addr = format!("0.0.0.0:{}", web_port);

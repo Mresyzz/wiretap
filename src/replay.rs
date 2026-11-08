@@ -39,7 +39,16 @@ pub async fn execute_replay(
         .build()
         .map_err(|e| format!("Failed to create client: {}", e))?;
 
-    let target_url = override_url.unwrap_or(&entry.full_url);
+    let target_url = match override_url {
+        Some(base) => {
+            let clean_base = base.trim_end_matches('/');
+            match &entry.query {
+                Some(q) => format!("{}{}{}?{}", clean_base, if entry.path.starts_with('/') { "" } else { "/" }, entry.path, q),
+                None => format!("{}{}{}", clean_base, if entry.path.starts_with('/') { "" } else { "/" }, entry.path),
+            }
+        }
+        None => entry.full_url.clone(),
+    };
     let method = Method::from_bytes(entry.method.as_bytes())
         .map_err(|e| format!("Invalid HTTP method: {}", e))?;
 
@@ -58,7 +67,7 @@ pub async fn execute_replay(
     }
 
     let start_time = Instant::now();
-    let mut req_builder = client.request(method, target_url).headers(headers);
+    let mut req_builder = client.request(method, &target_url).headers(headers);
 
     if let Some(body) = &entry.request_body {
         req_builder = req_builder.body(body.clone());
