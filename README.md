@@ -82,6 +82,39 @@ All incoming requests return `200 OK` and are recorded for real-time inspection.
 
 ---
 
+## Installation
+
+### 1. Pre-built Binaries
+Download the standalone binary for your platform from [GitHub Releases](https://github.com/Mresyzz/wiretap/releases):
+- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
+- **Linux (x86_64)**: `wiretap-linux-x86_64`
+- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
+- **macOS (Intel)**: `wiretap-darwin-x86_64`
+
+### 2. Via Cargo
+```bash
+cargo install --git https://github.com/Mresyzz/wiretap.git
+```
+
+### 3. Build from Source
+Requirements: [Rust](https://www.rust-lang.org/) 1.75+
+
+```bash
+git clone https://github.com/Mresyzz/wiretap.git
+cd wiretap
+
+# Run tests (18 tests)
+cargo test
+
+# Build optimized release binary (<6MB)
+cargo build --release
+
+# The compiled binary will be available at:
+./target/release/wiretap
+```
+
+---
+
 ## Command-Line Usage
 
 ```text
@@ -114,27 +147,6 @@ Options:
 | `Alt + T` | Open Developer Toolbox & Port Radar |
 | `Ctrl + Enter` | Send replay request when drawer is open |
 | `Esc` | Close modal or replay drawer |
-
----
-
-## Build from Source
-
-Requirements: [Rust](https://www.rust-lang.org/) 1.75+
-
-```bash
-# Clone the repository
-git clone https://github.com/Mresyzz/wiretap.git
-cd wiretap
-
-# Run tests (18 tests)
-cargo test
-
-# Build optimized release binary (<6MB)
-cargo build --release
-
-# The compiled binary will be available at:
-./target/release/wiretap
-```
 
 ---
 

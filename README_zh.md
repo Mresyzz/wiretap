@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 [![Binary Size](https://img.shields.io/badge/binary_size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blueviolet.svg)](#源码构建与运行)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blueviolet.svg)](#安装与运行)
 [![Tests](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
 
 WireTap 将透明代理引擎与内置的现代化实时 Web 工作台深度融合。开发者无需安装 Node.js、Docker、Python 环境或注册任何云端账户，单文件直接运行即可在毫秒级内捕获、分析、筛选、修改并重放本地微服务与客户端网络流量。
@@ -82,6 +82,39 @@ wiretap mock :8080
 
 ---
 
+## 安装与运行
+
+### 1. 预编译单二进制下载
+直接从 [GitHub Releases](https://github.com/Mresyzz/wiretap/releases) 下载对应平台的独立可执行文件，开箱即用，无需配置环境：
+- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
+- **Linux (x86_64)**: `wiretap-linux-x86_64`
+- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
+- **macOS (Intel)**: `wiretap-darwin-x86_64`
+
+### 2. 使用 Cargo 安装
+```bash
+cargo install --git https://github.com/Mresyzz/wiretap.git
+```
+
+### 3. 从源码编译
+环境要求：[Rust](https://www.rust-lang.org/) 1.75+
+
+```bash
+git clone https://github.com/Mresyzz/wiretap.git
+cd wiretap
+
+# 运行自动化测试 (18 项全通过)
+cargo test
+
+# 编译极致优化的 Release 二进制文件 (<6MB)
+cargo build --release
+
+# 编译产物位于:
+./target/release/wiretap
+```
+
+---
+
 ## 命令行参数一览
 
 ```text
@@ -114,27 +147,6 @@ wiretap mock :8080
 | `Alt + T` | 快速打开开发者工具箱与本地端口雷达 |
 | `Ctrl + Enter` | 在原地重放抽屉打开时发送重放请求 |
 | `Esc` | 关闭当前弹窗或重放抽屉 |
-
----
-
-## 源码构建与运行
-
-环境要求：[Rust](https://www.rust-lang.org/) 1.75+
-
-```bash
-# 克隆仓库
-git clone https://github.com/Mresyzz/wiretap.git
-cd wiretap
-
-# 运行自动化测试 (18 项全通过)
-cargo test
-
-# 编译极致优化的 Release 二进制文件 (<6MB)
-cargo build --release
-
-# 编译产物位于:
-./target/release/wiretap
-```
 
 ---
 
