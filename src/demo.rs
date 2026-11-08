@@ -9,12 +9,10 @@ use crate::web::{create_web_router, WebState};
 pub async fn run_demo(web_port: u16) {
     let store = TrafficStore::new(1000);
 
-    println!("{}", "\n========================================================".dimmed());
-    println!("{}", "  📡 WIRETAP STUDIO -- ZERO-DEPENDENCY API INSPECTOR".bold().cyan());
-    println!("{}", "========================================================".dimmed());
-    println!("  {} http://127.0.0.1:{}", "Web Studio UI:".green().bold(), web_port.to_string().yellow().bold());
-    println!("  {} Realistic microservice traffic simulation", "Running Mode: ".magenta().bold());
-    println!("  {} Press Ctrl+C anytime to terminate\n", "Note:        ".dimmed());
+    println!("\nWireTap v{} -- Zero-Setup Demo Mode", env!("CARGO_PKG_VERSION"));
+    println!("  Web Studio UI: http://127.0.0.1:{}", web_port);
+    println!("  Traffic source: Simulated live microservice streams");
+    println!("  Status:         Active (Press Ctrl+C to exit)\n");
 
     // 预置初始真实示例流量
     seed_initial_traffic(&store).await;
@@ -48,7 +46,7 @@ pub async fn run_demo(web_port: u16) {
         let _ = axum::serve(listener, app).await;
     });
 
-    println!("{}", "  ✨ Studio is live! Open your browser to view incoming streams.".bold().green());
+    println!("{}", "  Studio is listening. Open your browser to view incoming streams.".green());
 
     // 持续生成动态流量
     let mock_endpoints = vec![
@@ -98,7 +96,7 @@ pub async fn run_demo(web_port: u16) {
         } else {
             status.to_string().red()
         };
-        println!("  {} {} {:<28} -> {} ({}ms)", "•".cyan(), method.bold(), path, status_colored, duration);
+        println!("  [{}] {:<28} -> {} ({}ms)", method, path, status_colored, duration);
     }
 }
 

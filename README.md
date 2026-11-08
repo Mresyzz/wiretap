@@ -1,151 +1,141 @@
-# 📡 WireTap
+# WireTap
 
-<p align="center">
-  <strong>The zero-dependency, single-binary API traffic inspector, debugger, and replay studio.</strong><br>
-  <em>Ditch the bloated cloud SaaS. Intercept, inspect, and replay HTTP traffic locally in milliseconds.</em>
-</p>
+A lightweight, zero-dependency, single-binary HTTP/HTTPS traffic inspector and replay studio written in Rust.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg" alt="License" />
-  <img src="https://img.shields.io/badge/binary_size-<8MB-success.svg" alt="Size" />
-  <img src="https://img.shields.io/badge/dependencies-ZERO-orange.svg" alt="Zero Dependencies" />
-  <img src="https://img.shields.io/badge/platform-macOS%20|%20Linux%20|%20Windows-blueviolet.svg" alt="Platforms" />
-  <img src="https://img.shields.io/badge/cloud_account-NONE-red.svg" alt="No Account Required" />
-</p>
+WireTap combines a high-performance transparent MITM proxy engine with an embedded real-time web workbench. It allows developers to capture, inspect, filter, modify, and replay local or microservice API traffic without external dependencies, Node.js runtimes, or cloud accounts.
 
----
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
+[![Binary Size](https://img.shields.io/badge/binary_size-<6MB-success.svg)](https://github.com/Mresyzz/wiretap/releases)
+[![Build Status](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
 
 ```
-                       ┌────────────────────────┐
-                       │   Client / Frontend    │
-                       └───────────┬────────────┘
-                                   │ HTTP Req (:8080)
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        WIRETAP (Single Binary)                         │
-│                                                                        │
-│   ┌─────────────────────┐                 ┌────────────────────────┐   │
-│   │  Transparent Proxy  │──(Upstream Req)─▶   Your Backend API     │   │
-│   │       Engine        │◀─(Resp Metrics)─┤    (:3000 / Cloud)     │   │
-│   └──────────┬──────────┘                 └────────────────────────┘   │
-│              │                                                         │
-│              ▼ (Event Bus)                                             │
-│   ┌─────────────────────┐    SSE Stream    ┌───────────────────────┐   │
-│   │ In-Memory RingBuffer│─────────────────▶│ Embedded Web Studio   │   │
-│   │   (Max 1000 items)  │◀──(One-Click)───│ (:9090 Modern DarkUI) │   │
-│   └─────────────────────┘    Replay Action └───────────────────────┘   │
-└────────────────────────────────────────────────────────────────────────┘
+                       +------------------------+
+                       |   Client / Frontend    |
+                       +-----------+------------+
+                                   | HTTP/HTTPS Req (:8080)
+                                   v
++------------------------------------------------------------------------+
+|                        WIRETAP (Single Binary)                         |
+|                                                                        |
+|   +---------------------+                 +------------------------+   |
+|   |  Transparent Proxy  |--(Forward Req)->|   Your Backend API     |   |
+|   |       Engine        |<--(Resp Stream)-|    (:3000 / Cloud)     |   |
+|   +----------+----------+                 +------------------------+   |
+|              |                                                         |
+|              v (Event Bus)                                             |
+|   +---------------------+   WebSocket / SSE+-----------------------+   |
+|   | In-Memory RingBuffer|----------------->| Embedded Web Studio   |   |
+|   |   (Max 1000 items)  |<--(One-Click)----| (:9090 Tactile UI)    |   |
+|   +---------------------+    Replay Action +-----------------------+   |
++------------------------------------------------------------------------+
 ```
 
 ---
 
-## ⚡ Why WireTap?
+## Core Capabilities
 
-For years, developers just wanted to inspect a local API request or test a webhook. Instead, commercial API tools succumbed to **severe service degradation (Enshittification)**:
-- **Forced cloud login** & mandatory workspace synchronization.
-- **Privacy leaks**: sending proprietary authorization tokens, customer payloads, and internal API keys to third-party cloud servers.
-- **Bloatware**: Electron containers consuming 800MB+ RAM with 10-second startup splash screens.
-- **Wireshark** is too low-level for application-layer JSON/REST; **Charles/Fiddler** are commercial nagware requiring messy root CA installation.
-
-**WireTap fixes this with zero-compromise engineering:**
-- 🚀 **Single Static Binary**: Built with pure Rust. No Node.js, no Python, no Docker, no external database. Starts in **<5ms** with **<10MB** RAM.
-- 🔒 **100% Local & Private**: Zero accounts, zero cloud telemetry, zero remote dependencies. Everything stays in your memory.
-- ⚡ **Zero-Config Transparent Proxy**: Run `wiretap :8080 --to localhost:3000`. Point your app to port 8080 and you're done. No SSL certificates to generate.
-- 🎨 **Built-in Raycast-Grade Web Studio**: Modern dark-mode dashboard embedded right inside the executable. Live SSE waterfall, JSON syntax highlighting, latency breakdown, one-click replay, and instant cURL export.
-- 🧪 **Zero-Setup Demo Mode**: Try it in 3 seconds without having any backend server running via `wiretap demo`.
+- **Single Static Binary**: Built with pure Rust (Tokio, Axum, Hudsucker). No Docker, Python, or Node.js required. Starts in under 5 ms with less than 10 MB idle RAM.
+- **Local-First & Zero Telemetry**: Captured headers and payloads remain strictly in local memory. Zero cloud telemetry, mandatory logins, or tracking.
+- **In-Situ Replay & Diff**: Edit method, headers, or body directly in the inspector drawer, re-execute the request instantly, and review side-by-side Response Diffs.
+- **Credential Masking**: Automatically detects and redacts `Authorization: Bearer`, `Cookie`, and tokens with one click before sharing captures.
+- **Local Port Radar**: High-concurrency engine (up to 500 tasks) that scans `1-65535` or common development ports to discover active microservices and bind them with one click.
+- **Auto System Proxy (`--sys`)**: Automatically configures the OS proxy on launch and safely restores network settings upon exit (`Ctrl+C`).
+- **Standard Import / Export**: One-click import and execution of raw cURL commands; export captured traffic sessions to standard HAR 2.0 format.
+- **Zero-Setup Demo**: Run `wiretap demo` to explore the complete studio with live simulated microservice traffic.
 
 ---
 
-## 📊 Feature Comparison
+## Quick Start
 
-| Capability | WireTap | Postman / Insomnia | Charles / Fiddler | Wireshark |
-| :--- | :---: | :---: | :---: | :---: |
-| **Account / Login Required** | **None (Zero Account)** | Mandatory Cloud Sign-in | License Key / Paywall | None |
-| **Data Privacy** | **100% Local (In-Memory)** | Cloud Sync by Default | Local | Local |
-| **Binary Size & Runtime** | **< 8MB (Single Binary)** | ~350MB+ (Electron) | ~150MB+ (Java/.NET) | ~100MB+ |
-| **Startup Time** | **< 5 ms** | 8 – 15 seconds | 4 – 8 seconds | ~2 seconds |
-| **Root CA Installation** | **Not Needed (Proxy Mode)** | Not Needed | Mandatory for HTTPS | Not Needed (pcap) |
-| **One-Click Replay** | **Yes (Built-in)** | Yes | Clunky | Complex |
-| **Instant cURL Generation** | **Yes (1-Click Copy)** | Yes | Export required | No |
-| **Resource Idle Cost** | **< 10MB RAM** | 600MB – 1.2GB RAM | 250MB – 400MB RAM | ~80MB RAM |
-| **Open Source License** | **MIT / Apache-2.0** | Proprietary SaaS | Commercial Closed | GPLv2 |
-
----
-
-## 🚀 Quick Start (Under 30 Seconds)
-
-### 1. Instant Demo (No backend needed)
-Experience WireTap immediately with live simulated microservice traffic:
+### 1. Demo Mode
+Explore the interface with simulated microservice traffic:
 ```bash
 wiretap demo
 ```
-Open **`http://127.0.0.1:9090`** in your browser to watch requests stream in real time!
+Open **`http://127.0.0.1:9090`** in your browser.
 
----
-
-### 2. Transparent Proxy Mode
-Forward traffic from `:8080` to your real backend running on `:3000`:
+### 2. Reverse Proxy Mode
+Forward traffic from `:8080` to an upstream backend on `:3000`:
 ```bash
 wiretap :8080 --to http://localhost:3000
 ```
-- Send any request to `http://localhost:8080/api/...`
-- WireTap forwards it to `http://localhost:3000/api/...` and records the complete payload, headers, and duration.
-- Open **`http://127.0.0.1:9090`** to inspect the live waterfall and trigger one-click replays.
 
----
+### 3. System Proxy Mode
+Automatically route all system HTTP/HTTPS requests through WireTap (automatically restored on exit):
+```bash
+wiretap :8080 --to http://localhost:3000 --sys
+```
 
-### 3. Mock / Sink Mode (Webhook & Callback Inspector)
-Need to debug a third-party webhook (Stripe, GitHub, Shopify) or external script without writing a server?
+### 4. Webhook / Mock Sink Mode
+Capture third-party callbacks or webhooks without running an upstream server:
 ```bash
 wiretap mock :8080
 ```
-WireTap will accept any incoming HTTP request (GET, POST, PUT, DELETE), return `200 OK`, and capture full headers and bodies for visual inspection.
+All incoming requests return `200 OK` and are recorded for real-time inspection.
 
 ---
 
-## 🛠️ Installation
-
-### Cargo (Recommended)
-```bash
-cargo install --path .
-```
-
-### Pre-built Binaries
-Download pre-built standalone binaries directly from the repository's GitHub Releases tab:
-- `wiretap-linux-x86_64`
-- `wiretap-darwin-arm64` (Apple Silicon)
-- `wiretap-windows-x86_64.exe`
-
-Just place it anywhere in your `$PATH`. No runtime dependencies required.
-
----
-
-## 💻 CLI Options
+## Command-Line Usage
 
 ```text
 Usage: wiretap [OPTIONS] [COMMAND]
 
 Commands:
-  demo    Launch zero-setup demo mode with live simulated traffic
+  demo    Launch zero-setup demo mode with live simulated streams
   proxy   Intercept and inspect traffic by proxying to an upstream service
-  mock    Run as a standalone mock/sink server to inspect webhooks or incoming requests
+  mock    Run as a standalone mock/sink server to inspect webhooks
   help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -l, --listen <LISTEN>            Listening port for the proxy [default: 8080]
-  -t, --to <TO>                    Upstream target base URL to proxy to (e.g. http://localhost:3000)
-      --ui-port <UI_PORT>          Port for the embedded Web Studio UI [default: 9090]
-      --max-history <MAX_HISTORY>  Max traffic items in memory ring buffer [default: 1000]
-  -h, --help                       Print help
-  -V, --version                    Print version
+      --listen <LISTEN>        Listening port for the proxy [default: 8080]
+      --to <TO>                Upstream target base URL to proxy to
+      --ui-port <UI_PORT>      Port for the embedded Web Studio UI [default: 9090]
+      --max-history <HISTORY>  Maximum traffic entries to retain [default: 1000]
+  -s, --sys                    Automatically configure OS proxy on launch and restore on exit
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
 
 ---
 
-## 🛡️ License
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl + K` or `/` | Focus search and URL/method filter |
+| `Space` | Pause / resume real-time traffic capture |
+| `Alt + T` | Open Developer Toolbox & Port Radar |
+| `Ctrl + Enter` | Send replay request when drawer is open |
+| `Esc` | Close modal or replay drawer |
+
+---
+
+## Build from Source
+
+Requirements: [Rust](https://www.rust-lang.org/) 1.75+
+
+```bash
+# Clone the repository
+git clone https://github.com/Mresyzz/wiretap.git
+cd wiretap
+
+# Run tests (18 tests)
+cargo test
+
+# Build optimized release binary (<6MB)
+cargo build --release
+
+# The compiled binary will be available at:
+./target/release/wiretap
+```
+
+---
+
+## License
 
 Licensed under either of:
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
 
 at your option.

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12'/%3E%3C/svg%3E">
   <title>WireTap | 极简 API 流量工作台</title>
   <style>
     :root {
@@ -266,7 +267,7 @@
       border-radius: 6px;
     }
 
-    /* Liquid Segmented Controls */
+    /* Segmented Controls */
     .segmented-track {
       position: relative;
       display: inline-flex;
@@ -935,69 +936,7 @@
       font-weight: 600;
     }
 
-    .preset-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .preset-card {
-      padding: 14px;
-      border-radius: 12px;
-      border: 1.5px solid var(--border-color);
-      background: var(--bg-primary);
-      cursor: pointer;
-      transition: all 0.2s var(--spring-glide);
-    }
-    .preset-card:hover {
-      border-color: #9CA3AF;
-    }
-    .preset-card.active {
-      border-color: var(--accent-black);
-      background: var(--accent-black);
-      color: var(--accent-white);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    }
-    .preset-card.active .preset-sub {
-      color: rgba(255, 255, 255, 0.78);
-    }
-    .preset-title {
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .preset-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    /* Dynamic Island Banner */
-    .dynamic-island {
-      position: fixed;
-      top: 8px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-80px) scale(0.85);
-      background: var(--accent-black);
-      color: var(--accent-white);
-      padding: 7px 14px;
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-      z-index: 90;
-      opacity: 0;
-      pointer-events: none;
-      transition: transform 0.42s var(--spring-bounce), opacity 0.25s ease;
-    }
-    .dynamic-island.active {
-      transform: translateX(-50%) translateY(0) scale(1);
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Toast Notification */
+        /* Toast Notification */
     .toast-capsule {
       position: fixed;
       bottom: 22px;
@@ -1054,21 +993,14 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Dynamic Island Intercept Capsule -->
-    <div id="dynamic-island" class="dynamic-island">
-      <span class="status-dot pulsing" style="background:#FFFFFF;"></span>
-      <span id="island-text" class="mono" style="font-size:11.5px;font-weight:600;">已捕获拦截请求</span>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <button onclick="resolveIntercept('forward')" class="tactile" style="background:#FFFFFF;color:#000000;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">放行 ⏎</button>
-        <button onclick="resolveIntercept('mutate')" class="tactile" style="background:rgba(255,255,255,0.18);color:#FFFFFF;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;">修改</button>
-        <button onclick="resolveIntercept('drop')" class="tactile" style="color:rgba(255,255,255,0.7);padding:3px 6px;font-size:11px;">丢弃</button>
-      </div>
-    </div>
+    
 
     <!-- Top System Header -->
     <header class="top-header">
       <div class="brand-group">
-        <div class="brand-logo">W</div>
+        <div class="brand-logo" style="display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
         <span class="brand-title">WIRETAP</span>
       </div>
 
@@ -1081,14 +1013,7 @@
 
         <div class="divider-v"></div>
 
-        <!-- Breakpoint Mode Switch -->
-        <div class="segmented-track" id="bp-quick-track">
-          <button onclick="setInterceptMode('OFF')" id="bp-q-off" class="segmented-btn active" aria-label="放行所有请求">放行</button>
-          <button onclick="setInterceptMode('REQ')" id="bp-q-req" class="segmented-btn" aria-label="拦截请求阶段">拦截 REQ</button>
-          <button onclick="setInterceptMode('RESP')" id="bp-q-resp" class="segmented-btn" aria-label="拦截响应阶段">拦截 RESP</button>
-        </div>
-
-        <div class="divider-v"></div>
+        
 
         <button onclick="openCurlModal()" class="btn btn-pill tactile" aria-label="导入并执行 cURL">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
@@ -1123,30 +1048,17 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
           </button>
 
-          <button onclick="switchPage('breakpoints', 1)" id="nav-breakpoints" data-tooltip="断点拦截" aria-label="断点拦截" class="nav-btn tactile">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
-            <span id="bp-dot-badge" class="nav-badge hidden"></span>
-          </button>
+          
 
-          <button onclick="switchPage('mock', 2)" id="nav-mock" data-tooltip="本地 Mock" aria-label="本地 Mock" class="nav-btn tactile">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            <span id="mock-dot-badge" class="nav-badge"></span>
-          </button>
-
-          <button onclick="switchPage('throttling', 3)" id="nav-throttling" data-tooltip="弱网仿真" aria-label="弱网仿真" class="nav-btn tactile">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-            <span id="throttle-dot-badge" class="nav-badge hidden"></span>
-          </button>
-
-          <button onclick="switchPage('tools', 4)" id="nav-tools" data-tooltip="工具箱 (⌥T)" aria-label="开发者工具箱" class="nav-btn tactile">
+          <button onclick="switchPage('tools', 1)" id="nav-tools" data-tooltip="工具箱 (Alt+T)" aria-label="开发者工具箱" class="nav-btn tactile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
           </button>
 
-          <button onclick="switchPage('security', 5)" id="nav-security" data-tooltip="HTTPS 根证书" aria-label="HTTPS 根证书" class="nav-btn tactile">
+          <button onclick="switchPage('security', 2)" id="nav-security" data-tooltip="HTTPS 根证书" aria-label="HTTPS 根证书" class="nav-btn tactile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           </button>
 
-          <button onclick="switchPage('settings', 6)" id="nav-settings" data-tooltip="设置" aria-label="系统与端口设置" class="nav-btn tactile">
+          <button onclick="switchPage('settings', 3)" id="nav-settings" data-tooltip="设置" aria-label="系统与端口设置" class="nav-btn tactile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </button>
         </div>
@@ -1171,12 +1083,12 @@
             <!-- Search Input with Regex & Clear -->
             <div class="search-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input id="search-input" type="text" oninput="handleSearchInput()" placeholder="搜索 URL / 方法 / 状态 (⌘K 或 /)" aria-label="Filter network traffic" class="search-input">
+              <input id="search-input" type="text" oninput="handleSearchInput()" placeholder="搜索 URL / 方法 / 状态 (Ctrl+K 或 /)" aria-label="Filter network traffic" class="search-input">
               <button id="search-clear-btn" onclick="clearSearchInput()" class="search-tool-btn hidden" title="清空搜索">×</button>
               <button id="regex-btn" onclick="toggleRegexMode()" class="search-tool-btn mono" title="正则匹配">.*</button>
             </div>
 
-            <!-- Liquid Method Segmented Filter -->
+            <!-- Method Filter -->
             <div class="segmented-track" id="method-track" style="width:100%;justify-content:space-between;">
               <div id="method-slider" class="segmented-pill"></div>
               <button onclick="setMethodFilter('ALL', this)" class="segmented-btn active mono" style="flex:1;">ALL</button>
@@ -1251,7 +1163,7 @@
                     <span class="mono" style="font-size:11.5px;font-weight:700;">IN-SITU REPLAY STUDIO</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <button onclick="toggleReplayDrawer()" class="btn btn-sm tactile">收起</button>
-                      <button onclick="executeInSituReplay()" class="btn btn-primary btn-sm tactile">发送真实重放 (⌘↵)</button>
+                      <button onclick="executeInSituReplay()" class="btn btn-primary btn-sm tactile">发送重放 (Ctrl+Enter)</button>
                     </div>
                   </div>
                   <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1361,100 +1273,27 @@
         </section>
       </main>
 
-      <!-- PAGE 2: BREAKPOINTS -->
-      <section id="page-breakpoints" class="page-view hidden">
-        <div class="standalone-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-heading">流量关注与规则拦截</h2>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">匹配特定请求特征并在控制台与灵动岛高亮提醒，便于追踪与一键重放</div>
-            </div>
-            <button onclick="openAddBpModal()" class="btn btn-primary tactile">+ 新增关注规则</button>
-          </div>
-
-          <div class="card-box">
-            <div class="card-box-header">
-              <span>拦截过滤匹配表</span>
-              <span class="mono" style="color:var(--text-muted);" id="bp-rule-count">0 Rules</span>
-            </div>
-            <div id="bp-rules-list"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- PAGE 3: LOCAL MOCK -->
-      <section id="page-mock" class="page-view hidden">
-        <div class="standalone-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-heading">本地 Mock 规则</h2>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">预置静态响应规则表 (开发中特性：规则已持久化保存)</div>
-            </div>
-            <button onclick="addMockRule()" class="btn btn-primary tactile">+ 新增 Mock</button>
-          </div>
-
-          <div id="mock-rules-list"></div>
-        </div>
-      </section>
-
-      <!-- PAGE 4: NETWORK THROTTLING -->
-      <section id="page-throttling" class="page-view hidden">
-        <div class="standalone-container">
-          <div class="page-header-row">
-            <h2 class="page-heading">弱网仿真与网络延迟</h2>
-          </div>
-
-          <div class="preset-grid">
-            <div onclick="applyThrottlePreset('none', 0, 0)" id="preset-none" class="preset-card active tactile">
-              <div class="preset-title">直连环境</div>
-              <div class="preset-sub mono">0ms · 无延迟</div>
-            </div>
-            <div onclick="applyThrottlePreset('4g', 90, 0)" id="preset-4g" class="preset-card tactile">
-              <div class="preset-title">Fast 4G</div>
-              <div class="preset-sub mono">+90ms RTT</div>
-            </div>
-            <div onclick="applyThrottlePreset('3g', 380, 2)" id="preset-3g" class="preset-card tactile">
-              <div class="preset-title">Slow 3G</div>
-              <div class="preset-sub mono">+380ms · 2% 抖动</div>
-            </div>
-            <div onclick="applyThrottlePreset('offline', 0, 100)" id="preset-offline" class="preset-card tactile">
-              <div class="preset-title">模拟断网</div>
-              <div class="preset-sub mono">100% 丢包中断</div>
-            </div>
-          </div>
-
-          <div class="card-box" style="padding:18px;">
-            <div style="margin-bottom:16px;">
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-weight:600;">附加 RTT 延迟</span>
-                <span id="slider-latency-label" class="mono" style="font-weight:700;">0 ms</span>
-              </div>
-              <input id="slider-latency" type="range" min="0" max="2000" step="20" value="0" oninput="updateCustomThrottle()">
-            </div>
-
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-weight:600;">丢包率 (Packet Loss)</span>
-                <span id="slider-loss-label" class="mono" style="font-weight:700;">0 %</span>
-              </div>
-              <input id="slider-loss" type="range" min="0" max="100" step="1" value="0" oninput="updateCustomThrottle()">
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- PAGE 5: DEVELOPER TOOLBOX -->
+      <!-- PAGE 2: DEVELOPER TOOLBOX -->
       <section id="page-tools" class="page-view hidden">
         <div class="standalone-container">
           <div class="page-header-row">
-            <h2 class="page-heading">开发者工具箱</h2>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                <h2 class="page-heading">开发者工具箱</h2>
+              </div>
           </div>
 
           <!-- JWT Inspector -->
           <div class="card-box">
             <div class="card-box-header">
-              <span>JWT 解码器 (Header & Payload)</span>
-              <button onclick="runJwtDecode()" class="btn btn-sm btn-primary tactile">解码 Token</button>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span style="font-weight:600;">JWT 解码器 (Header & Payload)</span>
+              </div>
+              <button onclick="runJwtDecode()" class="btn btn-sm btn-primary tactile" style="display:inline-flex;align-items:center;gap:5px;">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>解码 Token</span>
+              </button>
             </div>
             <div style="padding:14px;">
               <textarea id="jwt-input" rows="2" class="textarea-field" style="margin-bottom:10px;" placeholder="粘贴 JWT 字符串（Bearer eyJhbG...）"></textarea>
@@ -1474,7 +1313,10 @@
           <!-- Base64 & Timestamp -->
           <div class="diff-grid">
             <div class="card-box">
-              <div class="card-box-header"><span>UTF-8 安全 Base64 / URL 编解码</span></div>
+              <div class="card-box-header"><div style="display:flex;align-items:center;gap:8px;">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                  <span style="font-weight:600;">UTF-8 安全 Base64 / URL 编解码</span>
+                </div></div>
               <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
                 <input id="codec-input" type="text" placeholder="输入待编码/解码文本" class="input-field mono">
                 <div style="display:flex;gap:6px;">
@@ -1489,8 +1331,14 @@
 
             <div class="card-box">
               <div class="card-box-header">
-                <span>Unix 时间戳 & UUID v4</span>
-                <button onclick="generateUuid()" class="btn btn-sm tactile">生成 UUID</button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span style="font-weight:600;">Unix 时间戳 & UUID v4</span>
+                </div>
+                <button onclick="generateUuid()" class="btn btn-sm tactile" style="display:inline-flex;align-items:center;gap:5px;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>
+                  <span>生成 UUID</span>
+                </button>
               </div>
               <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;gap:6px;">
@@ -1505,12 +1353,18 @@
         </div>
       </section>
 
-      <!-- PAGE 6: ROOT CA & HTTPS -->
+      <!-- PAGE 3: ROOT CA & HTTPS -->
       <section id="page-security" class="page-view hidden">
         <div class="standalone-container">
           <div class="page-header-row">
-            <h2 class="page-heading">HTTPS 根证书管理</h2>
-            <button onclick="downloadCaFile()" class="btn btn-primary tactile">下载 wiretap-ca.crt</button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <h2 class="page-heading">HTTPS 根证书管理</h2>
+            </div>
+            <button onclick="downloadCaFile()" class="btn btn-primary tactile" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>下载 wiretap-ca.crt</span>
+            </button>
           </div>
 
           <div class="card-box">
@@ -1537,18 +1391,18 @@
         </div>
       </section>
 
-      <!-- PAGE 7: SETTINGS & PORTS -->
+      <!-- PAGE 4: SETTINGS & PORTS -->
       <section id="page-settings" class="page-view hidden">
         <div class="standalone-container">
           <div class="page-header-row">
             <div>
-              <h2 class="page-heading">系统设置</h2>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <h2 class="page-heading">系统设置</h2>
+              </div>
               <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">配置自动持久化保存至本地 <code>wiretap.config.json</code></div>
             </div>
-            <div id="settings-save-badge" class="status-pill mono" style="gap:6px;display:inline-flex;align-items:center;">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10B981;"></span>
-              <span>配置已同步</span>
-            </div>
+
           </div>
 
           <!-- 本地活跃端口雷达扫描 (支持全端口扫描) -->
@@ -1560,8 +1414,14 @@
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <div class="segmented-track" style="padding:2px;">
-                  <button type="button" id="scan-mode-dev" class="segmented-btn active" onclick="setScanMode('dev')" style="padding:3px 10px;font-size:11px;">⚡ 常用开发端口</button>
-                  <button type="button" id="scan-mode-all" class="segmented-btn" onclick="setScanMode('all')" style="padding:3px 10px;font-size:11px;">🌐 全端口扫描 (1-65535)</button>
+                  <button type="button" id="scan-mode-dev" class="segmented-btn active" onclick="setScanMode('dev')" style="padding:3px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>常用开发端口</span>
+                  </button>
+                  <button type="button" id="scan-mode-all" class="segmented-btn" onclick="setScanMode('all')" style="padding:3px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <span>全端口扫描 (1-65535)</span>
+                  </button>
                 </div>
                 <button type="button" id="btn-start-scan" onclick="triggerPortScan()" class="btn btn-sm btn-primary tactile" style="gap:5px;">
                   <svg id="scan-radar-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -1589,7 +1449,10 @@
           <!-- 网络与端口配置卡片 -->
           <div class="card-box" style="margin-bottom:20px;">
             <div class="card-box-header">
-              <span style="font-weight:600;">网络监听与端口选择</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                <span style="font-weight:600;">网络监听与端口选择</span>
+              </div>
               <span class="status-pill mono">Network &amp; Ports</span>
             </div>
             <div style="padding:18px;display:flex;flex-direction:column;gap:18px;">
@@ -1629,8 +1492,10 @@
           <!-- 上游转发目标 (毫秒级热更新) -->
           <div class="card-box" style="margin-bottom:20px;">
             <div class="card-box-header">
-              <span style="font-weight:600;">上游转发目标 (Upstream Target)</span>
-              <span class="status-pill mono" style="color:#10B981;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);">实时热生效 · 无需重启</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                <span style="font-weight:600;">上游转发目标 (Upstream Target)</span>
+              </div>
             </div>
             <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
               <div>
@@ -1650,7 +1515,10 @@
           <!-- 环形缓冲区历史容量 -->
           <div class="card-box" style="margin-bottom:20px;">
             <div class="card-box-header">
-              <span style="font-weight:600;">内存历史保留容量</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                <span style="font-weight:600;">内存历史保留容量</span>
+              </div>
               <span class="status-pill mono">RingBuffer</span>
             </div>
             <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
@@ -1695,28 +1563,7 @@
     </div>
   </div>
 
-  <!-- Add Breakpoint Modal -->
-  <div id="bp-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <span style="font-weight:700;font-size:14px;">新增断点规则</span>
-        <button onclick="closeAddBpModal()" class="btn btn-sm">ESC</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <select id="new-bp-method" class="input-field mono" style="width:100px;">
-          <option value="ALL">ALL</option>
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="DELETE">DELETE</option>
-        </select>
-        <input id="new-bp-pattern" type="text" placeholder="/api/v1/* 或关键字" class="input-field mono" style="flex:1;">
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button onclick="closeAddBpModal()" class="btn tactile">取消</button>
-        <button onclick="confirmAddBpRule()" class="btn btn-primary tactile">保存规则</button>
-      </div>
-    </div>
+  
   </div>
 
   <!-- Bottom Toast -->
@@ -1736,15 +1583,9 @@
     let isCapturing = true;
     let isListUnpinned = false;
     let unreadTrafficCount = 0;
-    let interceptMode = 'OFF';
-    let extraThrottleLatency = 0;
-    let throttleLossRate = 0;
     let lastDiffOrigin = null;
     let lastDiffMutated = null;
 
-    // Load user persistent rules from localStorage
-    let bpRules = JSON.parse(localStorage.getItem('wiretap_bp_rules') || '[]');
-    let mockRules = JSON.parse(localStorage.getItem('wiretap_mock_rules') || '[]');
 
     // --- Data Normalizer (Converts backend TrafficEntry to unified UI model) ---
     function normalizePacket(raw) {
@@ -1890,19 +1731,6 @@
     }
 
     function handleIncomingPacket(packet) {
-      // Check for breakpoint match
-      if (interceptMode !== 'OFF') {
-        const matched = bpRules.some(r => {
-          const mMatch = r.method === 'ALL' || r.method === packet.method;
-          const pMatch = packet.path.includes(r.pattern) || packet.url.includes(r.pattern);
-          return mMatch && pMatch;
-        });
-
-        if (matched) {
-          showDynamicIsland(packet);
-        }
-      }
-
       // Insert into local list
       packets.unshift(packet);
       if (packets.length > 1000) packets.pop();
@@ -1920,7 +1748,7 @@
       renderPacketList();
     }
 
-    // --- Liquid Segmented Pill Animator ---
+    // --- Segmented Pill Slider ---
     function moveSegmentedPill(trackId, pillId, targetBtn) {
       const track = document.getElementById(trackId);
       const pill = document.getElementById(pillId);
@@ -1937,7 +1765,7 @@
 
     // --- Navigation ---
     function switchPage(pageKey, index) {
-      const pages = ['traffic', 'breakpoints', 'mock', 'throttling', 'tools', 'security', 'settings'];
+      const pages = ['traffic', 'tools', 'security', 'settings'];
       pages.forEach(k => {
         const el = document.getElementById(`page-${k}`);
         const nav = document.getElementById(`nav-${k}`);
@@ -2433,40 +2261,6 @@
       showToast('敏感授权凭证已脱敏');
     }
 
-    // --- Breakpoint Mode & Dynamic Island ---
-    function setInterceptMode(mode) {
-      interceptMode = mode;
-      ['off', 'req', 'resp'].forEach(k => {
-        const b = document.getElementById(`bp-q-${k}`);
-        if (b) b.classList.toggle('active', k.toUpperCase() === mode);
-      });
-
-      const dotBadge = document.getElementById('bp-dot-badge');
-      dotBadge.classList.toggle('hidden', mode === 'OFF');
-      showToast(mode === 'OFF' ? '已关闭断点拦截' : `断点拦截已激活 (${mode})`);
-    }
-
-    function showDynamicIsland(packet) {
-      const island = document.getElementById('dynamic-island');
-      document.getElementById('island-text').textContent = `命中断点: ${packet.method} ${packet.path}`;
-      island.classList.add('active');
-    }
-
-    function resolveIntercept(action) {
-      const island = document.getElementById('dynamic-island');
-      island.classList.remove('active');
-      if (action === 'mutate') {
-        switchPage('traffic', 0);
-        const drawer = document.getElementById('replay-drawer');
-        drawer.classList.add('open');
-        showToast('已载入重放修改器');
-      } else if (action === 'forward') {
-        showToast('请求已放行');
-      } else {
-        showToast('已丢弃拦截请求');
-      }
-    }
-
     // --- Session Control ---
     function toggleCapture() {
       isCapturing = !isCapturing;
@@ -2489,122 +2283,6 @@
       renderPacketList();
       renderInspector();
       showToast('已清空所有流量记录');
-    }
-
-    // --- Breakpoint Rules Management ---
-    function renderBpRules() {
-      const container = document.getElementById('bp-rules-list');
-      document.getElementById('bp-rule-count').textContent = `${bpRules.length} Rules`;
-      if (bpRules.length === 0) {
-        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">暂无拦截规则，点击右上角新增</div>';
-        return;
-      }
-      container.innerHTML = bpRules.map(r => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #F1F3F5;" class="mono">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="method-badge solid-dark">${r.method}</span>
-            <span style="font-weight:600;">${escapeHtml(r.pattern)}</span>
-          </div>
-          <button onclick="deleteBpRule(${r.id})" class="btn btn-sm">删除</button>
-        </div>
-      `).join('');
-    }
-
-    function deleteBpRule(id) {
-      bpRules = bpRules.filter(r => r.id !== id);
-      localStorage.setItem('wiretap_bp_rules', JSON.stringify(bpRules));
-      renderBpRules();
-      showToast('已删除拦截规则');
-    }
-
-    function openAddBpModal() {
-      document.getElementById('bp-modal').classList.remove('hidden');
-      setTimeout(() => document.getElementById('new-bp-pattern').focus(), 60);
-    }
-
-    function closeAddBpModal() {
-      document.getElementById('bp-modal').classList.add('hidden');
-    }
-
-    function confirmAddBpRule() {
-      const method = document.getElementById('new-bp-method').value;
-      const pattern = document.getElementById('new-bp-pattern').value.trim();
-      if (!pattern) return;
-      bpRules.push({ id: Date.now(), method, pattern });
-      localStorage.setItem('wiretap_bp_rules', JSON.stringify(bpRules));
-      renderBpRules();
-      closeAddBpModal();
-      showToast('已添加拦截规则');
-    }
-
-    // --- Mock Rules Management ---
-    function renderMockRules() {
-      const box = document.getElementById('mock-rules-list');
-      if (mockRules.length === 0) {
-        box.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted);font-size:12px;">暂无本地 Mock 规则</div>';
-        return;
-      }
-      box.innerHTML = mockRules.map(m => `
-        <div class="card-box">
-          <div class="card-box-header mono">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="method-badge solid-dark">${m.method}</span>
-              <span>${escapeHtml(m.pattern)}</span>
-              <span class="status-pill">${m.status}</span>
-            </div>
-            <button onclick="deleteMockRule(${m.id})" class="btn btn-sm">移除</button>
-          </div>
-          <div style="padding:12px 16px;">
-            <pre class="code-card selectable">${escapeHtml(m.body)}</pre>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function addMockRule() {
-      const pattern = prompt('输入 Mock 匹配路径 (如 /api/v1/mock-test):', '/api/test');
-      if (!pattern) return;
-      mockRules.push({
-        id: Date.now(),
-        method: 'GET',
-        pattern,
-        status: 200,
-        body: JSON.stringify({ mocked: true, timestamp: Date.now() }, null, 2)
-      });
-      localStorage.setItem('wiretap_mock_rules', JSON.stringify(mockRules));
-      renderMockRules();
-      showToast('已添加 Mock 规则');
-    }
-
-    function deleteMockRule(id) {
-      mockRules = mockRules.filter(m => m.id !== id);
-      localStorage.setItem('wiretap_mock_rules', JSON.stringify(mockRules));
-      renderMockRules();
-      showToast('已删除 Mock 规则');
-    }
-
-    // --- Throttling Controls ---
-    function applyThrottlePreset(key, latency, loss) {
-      ['none', '4g', '3g', 'offline'].forEach(k => {
-        const el = document.getElementById(`preset-${k}`);
-        if (el) el.classList.toggle('active', k === key);
-      });
-      extraThrottleLatency = latency;
-      throttleLossRate = loss;
-      document.getElementById('slider-latency').value = latency;
-      document.getElementById('slider-latency-label').textContent = `${latency} ms`;
-      document.getElementById('slider-loss').value = loss;
-      document.getElementById('slider-loss-label').textContent = `${loss} %`;
-      document.getElementById('throttle-dot-badge').classList.toggle('hidden', key === 'none');
-      showToast(key === 'none' ? '已恢复直连无弱网状态' : `已激活网络仿真 (+${latency}ms)`);
-    }
-
-    function updateCustomThrottle() {
-      extraThrottleLatency = parseInt(document.getElementById('slider-latency').value, 10) || 0;
-      throttleLossRate = parseInt(document.getElementById('slider-loss').value, 10) || 0;
-      document.getElementById('slider-latency-label').textContent = `${extraThrottleLatency} ms`;
-      document.getElementById('slider-loss-label').textContent = `${throttleLossRate} %`;
-      document.getElementById('throttle-dot-badge').classList.toggle('hidden', extraThrottleLatency === 0 && throttleLossRate === 0);
     }
 
     // --- Developer Toolbox (Robust Real Logic) ---
@@ -2861,13 +2539,12 @@
         }
       } else if (e.altKey && e.key.toLowerCase() === 't') {
         e.preventDefault();
-        switchPage('tools', 4);
+        switchPage('tools', 1);
       } else if (e.key === ' ' && !inInput) {
         e.preventDefault();
         toggleCapture();
       } else if (e.key === 'Escape') {
         closeCurlModal();
-        closeAddBpModal();
       }
     });
 
@@ -2928,10 +2605,7 @@
     }
 
     function onSettingsInputChanged() {
-      const badge = document.getElementById('settings-save-badge');
-      if (badge) {
-        badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#F59E0B;animation:radarPulse 1.2s infinite;"></span><span style="color:var(--text-secondary);">等待输入...</span>`;
-      }
+      
       clearTimeout(settingsDebounceTimer);
       settingsDebounceTimer = setTimeout(autoSaveSettings, 350);
     }
@@ -2962,10 +2636,7 @@
         max_history: maxHistory
       };
 
-      const badge = document.getElementById('settings-save-badge');
-      if (badge) {
-        badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;"></span><span>保存中...</span>`;
-      }
+      
 
       try {
         const res = await fetch('/api/config', {
@@ -2977,9 +2648,7 @@
         if (res.ok) {
           const updated = await res.json();
           currentWireTapConfig = updated;
-          if (badge) {
-            badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10B981;"></span><span style="color:#059669;font-weight:500;">✓ 已自动保存至 wiretap.config.json</span>`;
-          }
+          
           if (payload.target_url) {
             const addrEl = document.getElementById('proxy-addr');
             if (addrEl) addrEl.textContent = `-> ${payload.target_url}`;
@@ -2992,9 +2661,7 @@
           throw new Error('Server status ' + res.status);
         }
       } catch (err) {
-        if (badge) {
-          badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#EF4444;"></span><span style="color:#EF4444;">保存失败</span>`;
-        }
+        
         showToast('保存配置失败: ' + err.message);
       }
     }
@@ -3097,8 +2764,14 @@
                     <span style="font-size:11px;color:var(--text-tertiary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.banner || '')}">${escapeHtml(bannerText)}</span>
                   </div>
                   <div style="display:flex;gap:6px;justify-content:flex-end;">
-                    <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;" onclick="quickSelectTarget('http://localhost:${p.port}')">设为上游目标</button>
-                    <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;" onclick="quickSelectPort('listen', ${p.port})">设为代理端口</button>
+                    <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;display:inline-flex;align-items:center;gap:4px;" onclick="quickSelectTarget('http://localhost:${p.port}')">
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                        <span>设为上游</span>
+                      </button>
+                      <button type="button" class="btn btn-sm tactile" style="font-size:11px;padding:3px 7px;display:inline-flex;align-items:center;gap:4px;" onclick="quickSelectPort('listen', ${p.port})">
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        <span>设为监听</span>
+                      </button>
                   </div>
                 </div>
               `;
@@ -3124,8 +2797,6 @@
 
     window.onload = function () {
       initBackendConnection();
-      renderBpRules();
-      renderMockRules();
       loadSettingsConfig();
       requestAnimationFrame(syncAllPills);
     };

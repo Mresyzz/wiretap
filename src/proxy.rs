@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -14,14 +15,14 @@ use hudsucker::{Body, HttpContext, HttpHandler, Proxy, RequestOrResponse, WebSoc
 use crate::model::{KeyValue, TrafficEntry};
 use crate::store::TrafficStore;
 
-/// 最大用于记录与文本化解析的 Body 大小 (10MB)，超出部分做保护截断，防 OOM DoS
+/// 最大用于记录与文本化解析的 Body 大小 (10MB)，超出部分截断，防 OOM DoS
 pub const MAX_RECORD_BODY_SIZE: usize = 10 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct WireTapProxyHandler {
     pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
     pub store: TrafficStore,
-    pending: Option<PendingRequest>,
+    pending: Arc<tokio::sync::Mutex<VecDeque<PendingRequest>>>,
 }
 
 #[derive(Clone)]
@@ -40,7 +41,7 @@ impl WireTapProxyHandler {
         Self {
             target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
             store,
-            pending: None,
+            pending: Arc::new(tokio::sync::Mutex::new(VecDeque::new())),
         }
     }
 
@@ -48,7 +49,7 @@ impl WireTapProxyHandler {
         Self {
             target_base_url,
             store,
-            pending: None,
+            pending: Arc::new(tokio::sync::Mutex::new(VecDeque::new())),
         }
     }
 
@@ -72,7 +73,19 @@ impl WireTapProxyHandler {
                     None => format!("{}{}{}", target, if path.starts_with('/') { "" } else { "/" }, path),
                 }
             }
-            None => original_uri.to_string(),
+            None => {
+                if original_uri.host().is_some() {
+                    original_uri.to_string()
+                } else {
+                    let host_header = req.headers().get(hudsucker::hyper::header::HOST)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("localhost");
+                    match &query {
+                        Some(q) => format!("http://{}{}{}?{}", host_header, if path.starts_with('/') { "" } else { "/" }, path, q),
+                        None => format!("http://{}{}{}", host_header, if path.starts_with('/') { "" } else { "/" }, path),
+                    }
+                }
+            }
         };
 
         if let Some(target) = &target_opt {
@@ -83,7 +96,7 @@ impl WireTapProxyHandler {
             };
             if let Ok(new_uri) = target_uri_str.parse::<Uri>() {
                 *req.uri_mut() = new_uri.clone();
-                // 自动更新 Host 头，避免上游因 Host 不匹配返回 404/421
+                // 自动更新 Host 请求头
                 if let Some(host) = new_uri.host() {
                     let host_val = if let Some(p) = new_uri.port_u16() {
                         format!("{}:{}", host, p)
@@ -119,7 +132,7 @@ impl WireTapProxyHandler {
             String::from_utf8(body_bytes.to_vec()).ok()
         };
 
-        self.pending = Some(PendingRequest {
+        self.pending.lock().await.push_back(PendingRequest {
             start_time,
             method,
             path,
@@ -162,7 +175,7 @@ impl WireTapProxyHandler {
             String::from_utf8(body_bytes.to_vec()).ok()
         };
 
-        if let Some(pending) = self.pending.take() {
+        if let Some(pending) = self.pending.lock().await.pop_front() {
             let duration_ms = pending.start_time.elapsed().as_millis() as u64;
             let entry = TrafficEntry::new(
                 pending.method,
@@ -208,7 +221,7 @@ impl HttpHandler for WireTapProxyHandler {
         err: hudsucker::hyper_util::client::legacy::Error,
     ) -> HyperResponse<Body> {
         let error_msg = format!("WireTap Proxy Error: Upstream unreachable: {}", err);
-        if let Some(pending) = self.pending.take() {
+        if let Some(pending) = self.pending.lock().await.pop_front() {
             let duration_ms = pending.start_time.elapsed().as_millis() as u64;
             let entry = TrafficEntry::new(
                 pending.method,
@@ -248,7 +261,7 @@ impl WebSocketHandler for WireTapProxyHandler {
     }
 }
 
-/// 构建真实有效的本地自签 CA 证书与私钥，并返回 (RcgenAuthority, PEM证书文本)
+/// 构建本地自签 CA 根证书与私钥，返回 (RcgenAuthority, PEM文本)
 pub fn build_ca() -> (RcgenAuthority, String) {
     let key_pair = KeyPair::generate().expect("generate ca key");
     let mut params = CertificateParams::default();

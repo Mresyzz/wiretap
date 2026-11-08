@@ -5,4 +5,5 @@ pub mod proxy;
 pub mod replay;
 pub mod scanner;
 pub mod store;
+pub mod sysproxy;
 pub mod web;
