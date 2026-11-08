@@ -1,12 +1,19 @@
 # WireTap
 
-A lightweight, zero-dependency, single-binary HTTP/HTTPS traffic inspector and replay studio written in Rust.
+<p align="left">
+  <strong>A lightweight, zero-dependency, single-binary HTTP/HTTPS traffic inspector and replay studio written in Rust.</strong>
+</p>
 
-WireTap combines a high-performance transparent MITM proxy engine with an embedded real-time web workbench. It allows developers to capture, inspect, filter, modify, and replay local or microservice API traffic without external dependencies, Node.js runtimes, or cloud accounts.
+<p align="left">
+  <a href="README.md">English</a> | <a href="README_zh.md">简体中文</a>
+</p>
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![Binary Size](https://img.shields.io/badge/binary_size-<6MB-success.svg)](https://github.com/Mresyzz/wiretap/releases)
-[![Build Status](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
+[![Binary Size](https://img.shields.io/badge/binary_size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blueviolet.svg)](#installation)
+[![Tests](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
+
+WireTap integrates a transparent proxy engine with an embedded real-time web workbench, allowing developers to capture, inspect, filter, modify, and replay local or microservice API traffic without external dependencies, Node.js runtimes, or cloud accounts.
 
 ```
                        +------------------------+
