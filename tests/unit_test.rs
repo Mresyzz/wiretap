@@ -154,10 +154,7 @@ mod tests {
         use wiretap::web::{create_web_router, WebState};
 
         let store = TrafficStore::new(10);
-        let app = create_web_router(WebState {
-            store,
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store, None));
 
         // Test GET /
         let resp = app
@@ -182,10 +179,7 @@ mod tests {
         use futures_util::StreamExt;
 
         let store = TrafficStore::new(10);
-        let app = create_web_router(WebState {
-            store: store.clone(),
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store.clone(), None));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -227,10 +221,7 @@ mod tests {
         use wiretap::web::{create_web_router, WebState};
 
         let store = TrafficStore::new(10);
-        let app = create_web_router(WebState {
-            store,
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store, None));
 
         // 1. Existing file: /static/index.html
         let resp = app
@@ -350,10 +341,7 @@ mod tests {
         use futures_util::StreamExt;
 
         let store = TrafficStore::new(50);
-        let app = create_web_router(WebState {
-            store: store.clone(),
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store.clone(), None));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -508,10 +496,7 @@ mod tests {
         use futures_util::StreamExt;
 
         let store = TrafficStore::new(1000);
-        let app = create_web_router(WebState {
-            store: store.clone(),
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store.clone(), None));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -561,10 +546,7 @@ mod tests {
         use wiretap::web::{create_web_router, WebState};
 
         let store = TrafficStore::new(10);
-        let app = create_web_router(WebState {
-            store,
-            target_base_url: None,
-        });
+        let app = create_web_router(WebState::new(store, None));
 
         // 1. GET /api/replay/nonexistent -> 404
         let resp = app
@@ -621,6 +603,91 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_config_api_and_persistence() {
+        use tower::ServiceExt;
+        use axum::http::{Request, StatusCode};
+        use wiretap::web::{create_web_router, WebState};
+        use wiretap::config::WireTapConfig;
+        use http_body_util::BodyExt;
+
+        let temp_dir = std::env::temp_dir();
+        let test_config_path = temp_dir.join(format!("wiretap_test_cfg_{}.json", uuid::Uuid::new_v4()));
+        
+        let store = TrafficStore::new(10);
+        let target_holder = std::sync::Arc::new(tokio::sync::RwLock::new(Some("http://initial-host:3000".to_string())));
+        let cfg = WireTapConfig {
+            listen_port: 8080,
+            target_url: "http://initial-host:3000".to_string(),
+            ui_port: 9090,
+            max_history: 1000,
+        };
+        let cfg_holder = std::sync::Arc::new(tokio::sync::RwLock::new(cfg));
+
+        let state = WebState {
+            store,
+            target_base_url: target_holder.clone(),
+            config: cfg_holder.clone(),
+            config_path: test_config_path.to_string_lossy().to_string(),
+        };
+        let app = create_web_router(state);
+
+        // 1. GET /api/config
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/config")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let read_cfg: WireTapConfig = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(read_cfg.listen_port, 8080);
+        assert_eq!(read_cfg.target_url, "http://initial-host:3000");
+
+        // 2. POST /api/config - Update configuration dynamically
+        let new_cfg = WireTapConfig {
+            listen_port: 8888,
+            target_url: "http://updated-upstream:5000".to_string(),
+            ui_port: 9091,
+            max_history: 2000,
+        };
+        let post_body = serde_json::to_string(&new_cfg).unwrap();
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/config")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(post_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify in-memory dynamic hot-update took effect
+        let current_target = target_holder.read().await.clone();
+        assert_eq!(current_target.as_deref(), Some("http://updated-upstream:5000"));
+
+        // Verify config was persisted to file on disk
+        assert!(test_config_path.exists());
+        let disk_cfg = WireTapConfig::load_or_default(&test_config_path);
+        assert_eq!(disk_cfg.listen_port, 8888);
+        assert_eq!(disk_cfg.target_url, "http://updated-upstream:5000");
+        assert_eq!(disk_cfg.ui_port, 9091);
+        assert_eq!(disk_cfg.max_history, 2000);
+
+        // Clean up temp file
+        let _ = std::fs::remove_file(test_config_path);
     }
 }
 

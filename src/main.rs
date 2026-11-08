@@ -1,6 +1,9 @@
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use clap::{Parser, Subcommand};
 use colored::*;
 
+use wiretap::config::{WireTapConfig, DEFAULT_CONFIG_FILE};
 use wiretap::demo;
 use wiretap::model;
 use wiretap::proxy::start_hudsucker_proxy;
@@ -116,8 +119,17 @@ async fn main() {
             start_mock(listen, ui_port, cli.max_history).await;
         }
         None => {
+            let saved_config = WireTapConfig::load_or_default(DEFAULT_CONFIG_FILE);
             if let Some(target) = cli.to {
                 start_proxy(cli.listen, target, cli.ui_port, cli.max_history).await;
+            } else if std::path::Path::new(DEFAULT_CONFIG_FILE).exists() {
+                println!("{}", "  ✨ Automatically loaded configuration from wiretap.config.json".green());
+                start_proxy(
+                    saved_config.listen_port.to_string(),
+                    saved_config.target_url,
+                    saved_config.ui_port,
+                    saved_config.max_history,
+                ).await;
             } else {
                 println!("{}", "  No upstream target specified (--to <URL>).".yellow());
                 println!("  Starting {} with live simulated streams...\n", "DEMO MODE".bold().cyan());
@@ -147,18 +159,33 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
     let target_base_url = normalize_target(&target_str);
     let store = TrafficStore::new(max_history);
 
+    // 自动加载或保存配置
+    let mut config = WireTapConfig::load_or_default(DEFAULT_CONFIG_FILE);
+    config.listen_port = proxy_port;
+    config.target_url = target_base_url.clone();
+    config.ui_port = ui_port;
+    config.max_history = max_history;
+    if let Err(e) = config.save_to_file(DEFAULT_CONFIG_FILE) {
+        eprintln!("Warning: failed to auto-save config file: {}", e);
+    }
+
+    let shared_target = Arc::new(RwLock::new(Some(target_base_url.clone())));
+    let shared_config = Arc::new(RwLock::new(config));
+
     println!("{}", "\n========================================================".dimmed());
     println!("{}", "  📡 WIRETAP STUDIO -- ACTIVE PROXY ENGINE".bold().cyan());
     println!("{}", "========================================================".dimmed());
-    println!("  {} http://127.0.0.1:{}", "Proxy Listening: ".green().bold(), proxy_port.to_string().yellow().bold());
+    println!("  {} http://127.0.0.1:{}", "Proxy Listening:  ".green().bold(), proxy_port.to_string().yellow().bold());
     println!("  {} {}", "Forwarding Target:".blue().bold(), target_base_url.white().bold());
-    println!("  {} http://127.0.0.1:{}", "Web Studio UI:   ".magenta().bold(), ui_port.to_string().yellow().bold());
-    println!("  {} Press Ctrl+C anytime to stop\n", "Status:          ".dimmed());
+    println!("  {} http://127.0.0.1:{}", "Web Studio UI:    ".magenta().bold(), ui_port.to_string().yellow().bold());
+    println!("  {} Automatically persisting to {}\n", "Config File:     ".dimmed(), DEFAULT_CONFIG_FILE.cyan());
 
     // 1. 启动 WebUI 服务
     let web_state = WebState {
         store: store.clone(),
-        target_base_url: Some(target_base_url.clone()),
+        target_base_url: shared_target.clone(),
+        config: shared_config.clone(),
+        config_path: DEFAULT_CONFIG_FILE.to_string(),
     };
     let web_router = create_web_router(web_state);
     let web_addr = format!("0.0.0.0:{}", ui_port);
@@ -175,7 +202,7 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
 
     // 2. 启动基于 Hudsucker 的核心代理服务
     println!("{}", "  🚀 Ready for traffic! Powered by Hudsucker MITM Engine.".green().bold());
-    if let Err(e) = start_hudsucker_proxy(proxy_port, Some(target_base_url), store).await {
+    if let Err(e) = start_hudsucker_proxy(proxy_port, shared_target, store).await {
         eprintln!("Proxy server encountered error: {}", e);
     }
 }
@@ -184,17 +211,28 @@ async fn start_mock(listen_str: String, ui_port: u16, max_history: usize) {
     let mock_port = parse_port(&listen_str);
     let store = TrafficStore::new(max_history);
 
+    let mut config = WireTapConfig::load_or_default(DEFAULT_CONFIG_FILE);
+    config.listen_port = mock_port;
+    config.ui_port = ui_port;
+    config.max_history = max_history;
+    let _ = config.save_to_file(DEFAULT_CONFIG_FILE);
+
+    let shared_target = Arc::new(RwLock::new(None));
+    let shared_config = Arc::new(RwLock::new(config));
+
     println!("{}", "\n========================================================".dimmed());
     println!("{}", "  📡 WIRETAP STUDIO -- MOCK & SINK MODE".bold().cyan());
     println!("{}", "========================================================".dimmed());
-    println!("  {} http://127.0.0.1:{}", "Mock Receiver: ".green().bold(), mock_port.to_string().yellow().bold());
-    println!("  {} http://127.0.0.1:{}", "Web Studio UI: ".magenta().bold(), ui_port.to_string().yellow().bold());
-    println!("  {} All incoming requests will be recorded and return 200 OK\n", "Info:          ".dimmed());
+    println!("  {} http://127.0.0.1:{}", "Mock Receiver:  ".green().bold(), mock_port.to_string().yellow().bold());
+    println!("  {} http://127.0.0.1:{}", "Web Studio UI:  ".magenta().bold(), ui_port.to_string().yellow().bold());
+    println!("  {} All incoming requests will be recorded and return 200 OK\n", "Info:           ".dimmed());
 
     // 1. 启动 WebUI 服务
     let web_state = WebState {
         store: store.clone(),
-        target_base_url: None,
+        target_base_url: shared_target,
+        config: shared_config,
+        config_path: DEFAULT_CONFIG_FILE.to_string(),
     };
     let web_router = create_web_router(web_state);
     let web_addr = format!("0.0.0.0:{}", ui_port);

@@ -20,9 +20,17 @@ pub async fn run_demo(web_port: u16) {
     seed_initial_traffic(&store).await;
 
     // 启动嵌入式 Web 服务
+    let cfg = crate::config::WireTapConfig {
+        listen_port: 8080,
+        target_url: "http://demo.internal.api".to_string(),
+        ui_port: web_port,
+        max_history: 1000,
+    };
     let web_state = WebState {
         store: store.clone(),
-        target_base_url: Some("http://demo.internal.api".to_string()),
+        target_base_url: std::sync::Arc::new(tokio::sync::RwLock::new(Some("http://demo.internal.api".to_string()))),
+        config: std::sync::Arc::new(tokio::sync::RwLock::new(cfg)),
+        config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
     };
     let app = create_web_router(web_state);
     let addr = format!("0.0.0.0:{}", web_port);

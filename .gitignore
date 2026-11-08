@@ -2,5 +2,6 @@
 **/*.rs.bk
 Cargo.lock
 *.exe
+wiretap.config.json
 .DS_Store
 Thumbs.db

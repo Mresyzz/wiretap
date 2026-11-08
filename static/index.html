@@ -1141,6 +1141,10 @@
           <button onclick="switchPage('security', 5)" id="nav-security" data-tooltip="HTTPS 根证书" aria-label="HTTPS 根证书" class="nav-btn tactile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           </button>
+
+          <button onclick="switchPage('settings', 6)" id="nav-settings" data-tooltip="设置" aria-label="系统与端口设置" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
         </div>
 
         <div class="nav-group">
@@ -1522,6 +1526,112 @@
           </div>
         </div>
       </section>
+
+      <!-- PAGE 7: SETTINGS & PORTS -->
+      <section id="page-settings" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-heading">系统设置</h2>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">配置自动持久化保存至本地 <code>wiretap.config.json</code></div>
+            </div>
+            <div id="settings-save-badge" class="status-pill mono" style="gap:6px;display:inline-flex;align-items:center;">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10B981;"></span>
+              <span>配置已同步</span>
+            </div>
+          </div>
+
+          <!-- 网络与端口配置卡片 -->
+          <div class="card-box" style="margin-bottom:20px;">
+            <div class="card-box-header">
+              <span style="font-weight:600;">网络监听与端口选择</span>
+              <span class="status-pill mono">Network &amp; Ports</span>
+            </div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:18px;">
+              <!-- 代理监听端口 -->
+              <div>
+                <label class="section-label" for="setting-listen-port" style="display:block;margin-bottom:6px;">代理监听端口 (Listen Port)</label>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <input id="setting-listen-port" type="number" min="1" max="65535" aria-label="代理监听端口" class="code-card selectable" style="width:140px;height:34px;padding:6px 10px;border-radius:8px;font-size:13px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" oninput="onSettingsInputChanged()" />
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="listen" data-port-val="8080" onclick="quickSelectPort('listen', 8080)">8080</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="listen" data-port-val="8888" onclick="quickSelectPort('listen', 8888)">8888</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="listen" data-port-val="9999" onclick="quickSelectPort('listen', 9999)">9999</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="listen" data-port-val="3000" onclick="quickSelectPort('listen', 3000)">3000</button>
+                  </div>
+                </div>
+                <div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;">WireTap 抓包代理服务绑定的监听端口（修改后保存，下次启动自动使用）</div>
+              </div>
+
+              <div style="height:1px;background:var(--border-color);"></div>
+
+              <!-- Web UI 端口 -->
+              <div>
+                <label class="section-label" for="setting-ui-port" style="display:block;margin-bottom:6px;">Web 控制台端口 (UI Port)</label>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <input id="setting-ui-port" type="number" min="1" max="65535" aria-label="Web控制台端口" class="code-card selectable" style="width:140px;height:34px;padding:6px 10px;border-radius:8px;font-size:13px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" oninput="onSettingsInputChanged()" />
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="ui" data-port-val="9090" onclick="quickSelectPort('ui', 9090)">9090</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="ui" data-port-val="8090" onclick="quickSelectPort('ui', 8090)">8090</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-port-type="ui" data-port-val="3333" onclick="quickSelectPort('ui', 3333)">3333</button>
+                  </div>
+                </div>
+                <div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;">当前 Web 控制台 UI 的访问端口（下次启动生效）</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上游转发目标 (毫秒级热更新) -->
+          <div class="card-box" style="margin-bottom:20px;">
+            <div class="card-box-header">
+              <span style="font-weight:600;">上游转发目标 (Upstream Target)</span>
+              <span class="status-pill mono" style="color:#10B981;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);">实时热生效 · 无需重启</span>
+            </div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <label class="section-label" for="setting-target-url" style="display:block;margin-bottom:6px;">转发目标基准地址 (Target Base URL)</label>
+                <input id="setting-target-url" type="text" placeholder="http://localhost:3000" aria-label="上游目标URL" class="code-card selectable" style="width:100%;max-width:540px;height:34px;padding:6px 10px;border-radius:8px;font-size:13px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" oninput="onSettingsInputChanged()" />
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-sm btn-pill tactile" onclick="quickSelectTarget('http://localhost:3000')">localhost:3000</button>
+                  <button type="button" class="btn btn-sm btn-pill tactile" onclick="quickSelectTarget('http://localhost:5173')">localhost:5173 (Vite)</button>
+                  <button type="button" class="btn btn-sm btn-pill tactile" onclick="quickSelectTarget('http://localhost:8000')">localhost:8000 (Python)</button>
+                  <button type="button" class="btn btn-sm btn-pill tactile" onclick="quickSelectTarget('https://httpbin.org')">httpbin.org</button>
+                </div>
+                <div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;">反向代理模式下请求流量转送的目标主机，修改后立即在当前运行的代理链路中生效</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 环形缓冲区历史容量 -->
+          <div class="card-box" style="margin-bottom:20px;">
+            <div class="card-box-header">
+              <span style="font-weight:600;">内存历史保留容量</span>
+              <span class="status-pill mono">RingBuffer</span>
+            </div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <label class="section-label" for="setting-max-history" style="display:block;margin-bottom:6px;">最大内存历史条数 (Max History Records)</label>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <input id="setting-max-history" type="number" min="10" max="50000" aria-label="最大内存历史条数" class="code-card selectable" style="width:140px;height:34px;padding:6px 10px;border-radius:8px;font-size:13px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" oninput="onSettingsInputChanged()" />
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-history-val="500" onclick="quickSelectHistory(500)">500 条</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-history-val="1000" onclick="quickSelectHistory(1000)">1000 条 (默认)</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-history-val="2000" onclick="quickSelectHistory(2000)">2000 条</button>
+                    <button type="button" class="btn btn-sm btn-pill tactile" data-history-val="5000" onclick="quickSelectHistory(5000)">5000 条</button>
+                  </div>
+                </div>
+                <div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;">超过最大数量时将按照先入先出 (FIFO) 自动淘汰最早的历史请求，保障内存极低开销</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 恢复默认与操作 -->
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:4px 0;">
+            <button type="button" onclick="resetDefaultSettings()" class="btn btn-sm tactile" style="color:var(--text-secondary);">恢复默认设置</button>
+          </div>
+
+        </div>
+      </section>
     </div>
   </div>
 
@@ -1782,7 +1892,7 @@
 
     // --- Navigation ---
     function switchPage(pageKey, index) {
-      const pages = ['traffic', 'breakpoints', 'mock', 'throttling', 'tools', 'security'];
+      const pages = ['traffic', 'breakpoints', 'mock', 'throttling', 'tools', 'security', 'settings'];
       pages.forEach(k => {
         const el = document.getElementById(`page-${k}`);
         const nav = document.getElementById(`nav-${k}`);
@@ -1799,6 +1909,8 @@
         requestAnimationFrame(syncAllPills);
       } else if (pageKey === 'tools') {
         runJwtDecode();
+      } else if (pageKey === 'settings') {
+        loadSettingsConfig();
       }
     }
 
@@ -2716,10 +2828,166 @@
 
     window.addEventListener('resize', syncAllPills);
 
+    // --- Settings & Configuration ---
+    let currentWireTapConfig = {
+      listen_port: 8080,
+      target_url: 'http://localhost:3000',
+      ui_port: 9090,
+      max_history: 1000
+    };
+    let settingsDebounceTimer = null;
+
+    async function loadSettingsConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const cfg = await res.json();
+          currentWireTapConfig = { ...currentWireTapConfig, ...cfg };
+          applyConfigToUi(currentWireTapConfig);
+        }
+      } catch (err) {
+        console.warn('Failed to load settings config:', err);
+      }
+    }
+
+    function applyConfigToUi(cfg) {
+      const elListen = document.getElementById('setting-listen-port');
+      const elUi = document.getElementById('setting-ui-port');
+      const elTarget = document.getElementById('setting-target-url');
+      const elHistory = document.getElementById('setting-max-history');
+
+      if (elListen) elListen.value = cfg.listen_port || 8080;
+      if (elUi) elUi.value = cfg.ui_port || 9090;
+      if (elTarget) elTarget.value = cfg.target_url || '';
+      if (elHistory) elHistory.value = cfg.max_history || 1000;
+
+      updatePortPillHighlight('listen', cfg.listen_port);
+      updatePortPillHighlight('ui', cfg.ui_port);
+      updateHistoryPillHighlight(cfg.max_history);
+    }
+
+    function updatePortPillHighlight(type, val) {
+      const pills = document.querySelectorAll(`[data-port-type="${type}"]`);
+      pills.forEach(btn => {
+        const p = parseInt(btn.getAttribute('data-port-val'), 10);
+        btn.classList.toggle('btn-primary', p === val);
+      });
+    }
+
+    function updateHistoryPillHighlight(val) {
+      const pills = document.querySelectorAll('[data-history-val]');
+      pills.forEach(btn => {
+        const h = parseInt(btn.getAttribute('data-history-val'), 10);
+        btn.classList.toggle('btn-primary', h === val);
+      });
+    }
+
+    function onSettingsInputChanged() {
+      const badge = document.getElementById('settings-save-badge');
+      if (badge) {
+        badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#F59E0B;animation:radarPulse 1.2s infinite;"></span><span style="color:var(--text-secondary);">等待输入...</span>`;
+      }
+      clearTimeout(settingsDebounceTimer);
+      settingsDebounceTimer = setTimeout(autoSaveSettings, 350);
+    }
+
+    async function autoSaveSettings() {
+      const listenPort = parseInt(document.getElementById('setting-listen-port').value, 10);
+      const uiPort = parseInt(document.getElementById('setting-ui-port').value, 10);
+      const targetUrl = document.getElementById('setting-target-url').value.trim();
+      const maxHistory = parseInt(document.getElementById('setting-max-history').value, 10);
+
+      if (isNaN(listenPort) || listenPort < 1 || listenPort > 65535) {
+        showToast('代理监听端口范围应为 1-65535');
+        return;
+      }
+      if (isNaN(uiPort) || uiPort < 1 || uiPort > 65535) {
+        showToast('Web UI 端口范围应为 1-65535');
+        return;
+      }
+      if (isNaN(maxHistory) || maxHistory < 10) {
+        showToast('历史条数最小为 10');
+        return;
+      }
+
+      const payload = {
+        listen_port: listenPort,
+        target_url: targetUrl || "http://localhost:3000",
+        ui_port: uiPort,
+        max_history: maxHistory
+      };
+
+      const badge = document.getElementById('settings-save-badge');
+      if (badge) {
+        badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;"></span><span>保存中...</span>`;
+      }
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const updated = await res.json();
+          currentWireTapConfig = updated;
+          if (badge) {
+            badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10B981;"></span><span style="color:#059669;font-weight:500;">✓ 已自动保存至 wiretap.config.json</span>`;
+          }
+          if (payload.target_url) {
+            const addrEl = document.getElementById('proxy-addr');
+            if (addrEl) addrEl.textContent = `-> ${payload.target_url}`;
+          }
+          updatePortPillHighlight('listen', payload.listen_port);
+          updatePortPillHighlight('ui', payload.ui_port);
+          updateHistoryPillHighlight(payload.max_history);
+          showToast('设置已自动保存');
+        } else {
+          throw new Error('Server status ' + res.status);
+        }
+      } catch (err) {
+        if (badge) {
+          badge.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#EF4444;"></span><span style="color:#EF4444;">保存失败</span>`;
+        }
+        showToast('保存配置失败: ' + err.message);
+      }
+    }
+
+    function quickSelectPort(type, port) {
+      if (type === 'listen') {
+        document.getElementById('setting-listen-port').value = port;
+      } else if (type === 'ui') {
+        document.getElementById('setting-ui-port').value = port;
+      }
+      onSettingsInputChanged();
+    }
+
+    function quickSelectTarget(url) {
+      document.getElementById('setting-target-url').value = url;
+      onSettingsInputChanged();
+    }
+
+    function quickSelectHistory(n) {
+      document.getElementById('setting-max-history').value = n;
+      onSettingsInputChanged();
+    }
+
+    function resetDefaultSettings() {
+      applyConfigToUi({
+        listen_port: 8080,
+        target_url: 'http://localhost:3000',
+        ui_port: 9090,
+        max_history: 1000
+      });
+      onSettingsInputChanged();
+    }
+
     window.onload = function () {
       initBackendConnection();
       renderBpRules();
       renderMockRules();
+      loadSettingsConfig();
       requestAnimationFrame(syncAllPills);
     };
   </script>

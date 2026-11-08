@@ -20,7 +20,7 @@ use crate::store::TrafficStore;
 
 #[derive(Clone)]
 pub struct WireTapProxyHandler {
-    pub target_base_url: Option<String>,
+    pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
     pub store: TrafficStore,
     pending: Option<PendingRequest>,
 }
@@ -39,11 +39,20 @@ struct PendingRequest {
 impl WireTapProxyHandler {
     pub fn new(store: TrafficStore, target_base_url: Option<String>) -> Self {
         Self {
+            target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
+            store,
+            pending: None,
+        }
+    }
+
+    pub fn new_shared(store: TrafficStore, target_base_url: Arc<tokio::sync::RwLock<Option<String>>>) -> Self {
+        Self {
             target_base_url,
             store,
             pending: None,
         }
     }
+
     pub async fn process_request(
         &mut self,
         mut req: HyperRequest<Body>,
@@ -54,7 +63,9 @@ impl WireTapProxyHandler {
         let path = original_uri.path().to_string();
         let query = original_uri.query().map(|q| q.to_string());
 
-        let full_url = match &self.target_base_url {
+        let target_opt = self.target_base_url.read().await.clone();
+
+        let full_url = match &target_opt {
             Some(target) => {
                 let target = target.trim_end_matches('/');
                 match &query {
@@ -65,7 +76,7 @@ impl WireTapProxyHandler {
             None => original_uri.to_string(),
         };
 
-        if let Some(target) = &self.target_base_url {
+        if let Some(target) = &target_opt {
             let target = target.trim_end_matches('/');
             let target_uri_str = match &query {
                 Some(q) => format!("{}{}{}?{}", target, if path.starts_with('/') { "" } else { "/" }, path, q),
@@ -235,12 +246,12 @@ pub fn build_ca() -> RcgenAuthority {
 
 pub async fn start_hudsucker_proxy(
     listen_port: u16,
-    target_base_url: Option<String>,
+    target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
     store: TrafficStore,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let ca = build_ca();
     let addr = SocketAddr::from(([0, 0, 0, 0], listen_port));
-    let handler = WireTapProxyHandler::new(store, target_base_url);
+    let handler = WireTapProxyHandler::new_shared(store, target_base_url);
 
     let proxy = Proxy::builder()
         .with_addr(addr)

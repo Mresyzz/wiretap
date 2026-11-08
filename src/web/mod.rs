@@ -16,6 +16,7 @@ use rust_embed::RustEmbed;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 
+use crate::config::WireTapConfig;
 use crate::replay::{execute_replay, generate_curl};
 use crate::store::TrafficStore;
 
@@ -26,7 +27,24 @@ pub struct Assets;
 #[derive(Clone)]
 pub struct WebState {
     pub store: TrafficStore,
-    pub target_base_url: Option<String>,
+    pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
+    pub config: Arc<tokio::sync::RwLock<WireTapConfig>>,
+    pub config_path: String,
+}
+
+impl WebState {
+    pub fn new(store: TrafficStore, target_base_url: Option<String>) -> Self {
+        let cfg = WireTapConfig {
+            target_url: target_base_url.clone().unwrap_or_else(|| "http://localhost:3000".to_string()),
+            ..Default::default()
+        };
+        Self {
+            store,
+            target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
+            config: Arc::new(tokio::sync::RwLock::new(cfg)),
+            config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
+        }
+    }
 }
 
 pub fn create_web_router(state: WebState) -> Router {
@@ -40,6 +58,7 @@ pub fn create_web_router(state: WebState) -> Router {
         .route("/api/clear", post(clear_handler))
         .route("/api/ca.crt", get(ca_cert_handler))
         .route("/api/status", get(status_handler))
+        .route("/api/config", get(get_config_handler).post(update_config_handler))
         .route("/static/*file", get(static_handler))
         .with_state(Arc::new(state))
 }
@@ -120,9 +139,10 @@ async fn replay_handler(
         .await
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Traffic entry not found".to_string()))?;
 
+    let target_opt = state.target_base_url.read().await.clone();
     let replay_result = execute_replay(
         &entry,
-        state.target_base_url.as_deref(),
+        target_opt.as_deref(),
         &state.store,
     )
     .await
@@ -161,9 +181,65 @@ async fn ca_cert_handler() -> impl IntoResponse {
 }
 
 async fn status_handler(State(state): State<Arc<WebState>>) -> Json<serde_json::Value> {
+    let target = state.target_base_url.read().await.clone();
+    let cfg = state.config.read().await.clone();
     Json(serde_json::json!({
         "status": "running",
-        "target": state.target_base_url,
+        "target": target,
+        "listen_port": cfg.listen_port,
+        "ui_port": cfg.ui_port,
+        "max_history": cfg.max_history,
         "traffic_count": state.store.list().await.len(),
     }))
+}
+
+async fn get_config_handler(State(state): State<Arc<WebState>>) -> Json<WireTapConfig> {
+    let cfg = state.config.read().await.clone();
+    Json(cfg)
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateConfigPayload {
+    pub target_url: Option<String>,
+    pub listen_port: Option<u16>,
+    pub ui_port: Option<u16>,
+    pub max_history: Option<usize>,
+}
+
+async fn update_config_handler(
+    State(state): State<Arc<WebState>>,
+    Json(payload): Json<UpdateConfigPayload>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cfg = state.config.write().await;
+
+    if let Some(target) = payload.target_url {
+        let trimmed = target.trim();
+        let normalized = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+            trimmed.to_string()
+        } else {
+            format!("http://{}", trimmed)
+        };
+        *state.target_base_url.write().await = Some(normalized.clone());
+        cfg.target_url = normalized;
+    }
+
+    if let Some(port) = payload.listen_port {
+        cfg.listen_port = port;
+    }
+    if let Some(ui_port) = payload.ui_port {
+        cfg.ui_port = ui_port;
+    }
+    if let Some(max_history) = payload.max_history {
+        cfg.max_history = max_history;
+    }
+
+    if let Err(e) = cfg.save_to_file(&state.config_path) {
+        eprintln!("Warning: failed to auto-save config file: {}", e);
+    }
+
+    Ok(Json(serde_json::json!({
+        "status": "ok",
+        "message": "配置已自动保存并实时生效",
+        "config": *cfg
+    })))
 }
