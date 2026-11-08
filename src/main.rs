@@ -1,10 +1,9 @@
-use std::sync::Arc;
 use clap::{Parser, Subcommand};
 use colored::*;
 
 use wiretap::demo;
 use wiretap::model;
-use wiretap::proxy::{proxy_handler, ProxyConfig};
+use wiretap::proxy::start_hudsucker_proxy;
 use wiretap::store::TrafficStore;
 use wiretap::web::{create_web_router, WebState};
 
@@ -143,26 +142,9 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
         let _ = axum::serve(web_listener, web_router).await;
     });
 
-    // 2. 启动透明代理服务
-    let proxy_config = Arc::new(ProxyConfig {
-        target_base_url,
-        store,
-    });
-    let proxy_router = axum::Router::new()
-        .fallback(proxy_handler)
-        .with_state(proxy_config);
-
-    let proxy_addr = format!("0.0.0.0:{}", proxy_port);
-    let proxy_listener = match tokio::net::TcpListener::bind(&proxy_addr).await {
-        Ok(l) => l,
-        Err(e) => {
-            eprintln!("{} Failed to bind Proxy on port {}: {}", "Error:".red().bold(), proxy_port, e);
-            return;
-        }
-    };
-
-    println!("{}", "  🚀 Ready for traffic! Send requests to the proxy port to inspect.".green().bold());
-    if let Err(e) = axum::serve(proxy_listener, proxy_router).await {
+    // 2. 启动基于 Hudsucker 的核心代理服务
+    println!("{}", "  🚀 Ready for traffic! Powered by Hudsucker MITM Engine.".green().bold());
+    if let Err(e) = start_hudsucker_proxy(proxy_port, Some(target_base_url), store).await {
         eprintln!("Proxy server encountered error: {}", e);
     }
 }

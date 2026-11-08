@@ -8,8 +8,8 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 tokio = { version = "1.38", features = ["full"] }
-axum = { version = "0.7", features = ["macros"] }
-tower = { version = "0.4" }
+axum = { version = "0.7", features = ["macros", "ws"] }
+tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["cors"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
 clap = { version = "4.5", features = ["derive"] }
@@ -20,6 +20,10 @@ uuid = { version = "1.8", features = ["v4", "serde"] }
 colored = "2.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures-util = "0.3"
+rust-embed = "8.13.0"
+hudsucker = "0.25.0"
+mime_guess = "2.0.5"
+http-body-util = "0.1.5"
 
 [profile.release]
 opt-level = 3
@@ -27,3 +31,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+tokio-tungstenite = "0.30.0"

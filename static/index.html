@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WireTap | 极简 API 流量工作台</title>
+  <style>
+    :root {
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #F7F8FA;
+      --bg-tertiary: #F2F4F7;
+      --bg-hover: #F3F4F6;
+      --border-color: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --text-primary: #0A0A0A;
+      --text-secondary: #4B5563;
+      --text-muted: #9CA3AF;
+      --accent-black: #0A0A0A;
+      --accent-white: #FFFFFF;
+      --spring-glide: cubic-bezier(0.16, 1, 0.3, 1);
+      --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.45;
+      user-select: none;
+    }
+
+    svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .selectable {
+      user-select: text;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.12);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    /* Tactile Press Effect */
+    .tactile {
+      transition: transform 0.18s var(--spring-glide), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tactile:active {
+      transform: scale(0.96);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent-black);
+      outline-offset: 1px;
+    }
+
+    /* App Shell Layout */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Header Toolbar */
+    .top-header {
+      height: 50px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 40;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: var(--accent-black);
+      color: var(--accent-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: -0.03em;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .proxy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-black);
+      position: relative;
+    }
+    .status-dot.pulsing::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent-black);
+      animation: radarPulse 1.8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .status-dot.connected {
+      background: #10B981;
+    }
+    .status-dot.connected::after {
+      border-color: #10B981;
+    }
+    .status-dot.paused {
+      background: #9CA3AF;
+    }
+    .status-dot.paused::after {
+      display: none;
+    }
+    .status-dot.error {
+      background: #EF4444;
+    }
+    .status-dot.error::after {
+      border-color: #EF4444;
+    }
+
+    @keyframes radarPulse {
+      0% { transform: scale(0.75); opacity: 0.75; }
+      100% { transform: scale(1.9); opacity: 0; }
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 16px;
+      background: var(--border-color);
+      margin: 0 3px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-strong);
+    }
+
+    .btn-primary {
+      background: var(--accent-black);
+      color: var(--accent-white);
+      border-color: var(--accent-black);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+    .btn-primary:hover {
+      background: #222222;
+      border-color: #222222;
+    }
+
+    .btn-pill {
+      border-radius: 999px;
+      padding: 5px 13px;
+    }
+
+    .btn-sm {
+      padding: 4px 9px;
+      font-size: 11px;
+      border-radius: 6px;
+    }
+
+    /* Liquid Segmented Controls */
+    .segmented-track {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-tertiary);
+      padding: 3px;
+      border-radius: 10px;
+      isolation: isolate;
+    }
+
+    .segmented-pill {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 0;
+      background: var(--bg-primary);
+      border-radius: 7px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+      z-index: 1;
+      transition: transform 0.36s var(--spring-glide), width 0.36s var(--spring-glide);
+      will-change: transform, width;
+    }
+
+    .segmented-btn {
+      position: relative;
+      z-index: 2;
+      padding: 4px 11px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: 7px;
+      transition: color 0.2s ease;
+      white-space: nowrap;
+    }
+    .segmented-btn.active {
+      color: var(--text-primary);
+    }
+
+    /* Main Workspace Container */
+    .workspace-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Left 60px Navigation Sidebar */
+    .nav-rail {
+      width: 60px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      flex-shrink: 0;
+      z-index: 30;
+      position: relative;
+    }
+
+    .nav-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      position: relative;
+    }
+
+    .sidebar-active-bar {
+      position: absolute;
+      left: 0;
+      width: 3.5px;
+      height: 22px;
+      background: var(--accent-black);
+      border-radius: 0 4px 4px 0;
+      transition: transform 0.38s var(--spring-glide);
+      z-index: 5;
+    }
+
+    .nav-btn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 0.2s var(--spring-glide);
+    }
+    .nav-btn:hover {
+      background: #EAECEF;
+      color: var(--text-primary);
+    }
+    .nav-btn.active {
+      background: var(--accent-black);
+      color: var(--accent-white);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-black);
+      border: 1.5px solid var(--bg-secondary);
+    }
+    .nav-btn.active .nav-badge {
+      background: var(--accent-white);
+      border-color: var(--accent-black);
+    }
+
+    .nav-btn::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 52px;
+      background: var(--accent-black);
+      color: var(--accent-white);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 9px;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-6px) scale(0.95);
+      transition: opacity 0.18s ease, transform 0.22s var(--spring-glide);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+      z-index: 100;
+    }
+    .nav-btn:hover::after {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+
+    /* Page View Containers */
+    .page-view {
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      animation: pageEnter 0.3s var(--spring-glide) forwards;
+    }
+
+    @keyframes pageEnter {
+      0% { opacity: 0; transform: translateY(6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* TRAFFIC SPLIT WORKBENCH */
+    .traffic-sidebar {
+      width: 380px;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .traffic-sidebar-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .traffic-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .count-pill {
+      padding: 1px 8px;
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--bg-secondary);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 0 8px 0 10px;
+      height: 34px;
+      transition: all 0.2s var(--spring-glide);
+    }
+    .search-box:focus-within {
+      background: var(--bg-primary);
+      border-color: var(--accent-black);
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+    }
+    .search-input {
+      flex: 1;
+      height: 100%;
+      padding: 0 8px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-tool-btn {
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .search-tool-btn:hover {
+      color: var(--text-primary);
+      background: #E5E7EB;
+    }
+    .search-tool-btn.active {
+      background: var(--accent-black);
+      color: var(--accent-white);
+    }
+
+    /* Packet Cards List */
+    .packet-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      gap: 12px;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .packet-card {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--bg-primary);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.18s var(--spring-glide), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease;
+      animation: cardSlideIn 0.24s var(--spring-glide);
+    }
+
+    @keyframes cardSlideIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .packet-card:hover {
+      background: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+
+    /* Selected Card (High-Contrast Apple Black) */
+    .packet-card.active {
+      background: var(--accent-black) !important;
+      border-color: var(--accent-black) !important;
+      color: var(--accent-white) !important;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+    }
+
+    .packet-row-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+    .method-badge.solid-dark {
+      background: var(--accent-black);
+      color: var(--accent-white);
+    }
+
+    .packet-card.active .method-badge {
+      background: var(--accent-white) !important;
+      color: var(--accent-black) !important;
+    }
+
+    .packet-path {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .packet-card.active .packet-path {
+      color: var(--accent-white) !important;
+      font-weight: 600;
+    }
+
+    .replay-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid currentColor;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    .packet-row-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .packet-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    .status-pill.err {
+      background: #EF4444;
+      color: #FFFFFF;
+    }
+
+    .packet-card.active .status-pill {
+      background: #FFFFFF !important;
+      color: #000000 !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .latency-track {
+      width: 34px;
+      height: 3px;
+      background: #E5E7EB;
+      border-radius: 999px;
+      position: relative;
+      overflow: hidden;
+    }
+    .packet-card.active .latency-track {
+      background: rgba(255, 255, 255, 0.25) !important;
+    }
+
+    .latency-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: var(--accent-black);
+      border-radius: 999px;
+    }
+    .packet-card.active .latency-fill {
+      background: #FFFFFF !important;
+    }
+
+    .packet-latency, .packet-time {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .packet-card.active .packet-latency,
+    .packet-card.active .packet-time {
+      color: rgba(255, 255, 255, 0.88) !important;
+    }
+
+    /* Floating Capsule for Unpinned List */
+    .new-traffic-pill {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.9);
+      background: var(--accent-black);
+      color: var(--accent-white);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s var(--spring-bounce);
+      z-index: 25;
+    }
+    .new-traffic-pill.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    /* Right Inspector Workbench */
+    .inspector-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .inspector-top-bar {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .url-summary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .inspector-url {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .inspector-subbar {
+      padding: 9px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: #FAFAFA;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .inspector-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* Replay Studio Drawer */
+    .replay-drawer-grid {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s var(--spring-glide), margin-bottom 0.35s var(--spring-glide);
+      margin-bottom: 0;
+    }
+    .replay-drawer-grid.open {
+      grid-template-rows: 1fr;
+      margin-bottom: 20px;
+    }
+    .replay-drawer-inner {
+      overflow: hidden;
+    }
+
+    .studio-card {
+      border: 1.5px solid var(--accent-black);
+      border-radius: 14px;
+      background: var(--bg-secondary);
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    .section-block {
+      margin-bottom: 22px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .kv-card {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-primary);
+    }
+
+    .kv-row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      border-bottom: 1px solid #F1F3F5;
+      font-size: 12px;
+    }
+    .kv-row:last-child {
+      border-bottom: none;
+    }
+    .kv-key {
+      padding: 9px 14px;
+      background: #FAFAFB;
+      color: var(--text-secondary);
+      font-weight: 500;
+      border-right: 1px solid #F1F3F5;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .kv-val {
+      padding: 9px 14px;
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    .code-card {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: #FAFAFB;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .input-field {
+      height: 34px;
+      padding: 0 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      font-size: 12px;
+      color: var(--text-primary);
+      transition: border-color 0.15s ease;
+    }
+    .input-field:focus {
+      border-color: var(--accent-black);
+    }
+
+    .textarea-field {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-primary);
+      resize: vertical;
+    }
+    .textarea-field:focus {
+      border-color: var(--accent-black);
+    }
+
+    /* Diff View */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .diff-line {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      white-space: pre-wrap;
+    }
+    .diff-changed {
+      background: #EAECEF;
+      font-weight: 600;
+      border-left: 3px solid var(--accent-black);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Standalone Pages */
+    .standalone-container {
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 24px;
+      overflow-y: auto;
+      height: 100%;
+    }
+
+    .page-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .page-heading {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .card-box {
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      background: var(--bg-primary);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .card-box-header {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .preset-card {
+      padding: 14px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-primary);
+      cursor: pointer;
+      transition: all 0.2s var(--spring-glide);
+    }
+    .preset-card:hover {
+      border-color: #9CA3AF;
+    }
+    .preset-card.active {
+      border-color: var(--accent-black);
+      background: var(--accent-black);
+      color: var(--accent-white);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+    .preset-card.active .preset-sub {
+      color: rgba(255, 255, 255, 0.78);
+    }
+    .preset-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .preset-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Dynamic Island Banner */
+    .dynamic-island {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px) scale(0.85);
+      background: var(--accent-black);
+      color: var(--accent-white);
+      padding: 7px 14px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+      z-index: 90;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.42s var(--spring-bounce), opacity 0.25s ease;
+    }
+    .dynamic-island.active {
+      transform: translateX(-50%) translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Toast Notification */
+    .toast-capsule {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(24px) scale(0.92);
+      background: rgba(10, 10, 10, 0.94);
+      backdrop-filter: blur(8px);
+      color: var(--accent-white);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s var(--spring-bounce);
+    }
+    .toast-capsule.show {
+      transform: translateX(-50%) translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+    }
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 18px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-black);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Dynamic Island Intercept Capsule -->
+    <div id="dynamic-island" class="dynamic-island">
+      <span class="status-dot pulsing" style="background:#FFFFFF;"></span>
+      <span id="island-text" class="mono" style="font-size:11.5px;font-weight:600;">已捕获拦截请求</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="resolveIntercept('forward')" class="tactile" style="background:#FFFFFF;color:#000000;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">放行 ⏎</button>
+        <button onclick="resolveIntercept('mutate')" class="tactile" style="background:rgba(255,255,255,0.18);color:#FFFFFF;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;">修改</button>
+        <button onclick="resolveIntercept('drop')" class="tactile" style="color:rgba(255,255,255,0.7);padding:3px 6px;font-size:11px;">丢弃</button>
+      </div>
+    </div>
+
+    <!-- Top System Header -->
+    <header class="top-header">
+      <div class="brand-group">
+        <div class="brand-logo">W</div>
+        <span class="brand-title">WIRETAP</span>
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Live Connection & Proxy Pill -->
+        <div class="proxy-pill mono" id="conn-pill" title="后端服务通信状态">
+          <span id="proxy-dot" class="status-dot pulsing connected"></span>
+          <span id="proxy-addr">127.0.0.1:8080</span>
+        </div>
+
+        <div class="divider-v"></div>
+
+        <!-- Breakpoint Mode Switch -->
+        <div class="segmented-track" id="bp-quick-track">
+          <button onclick="setInterceptMode('OFF')" id="bp-q-off" class="segmented-btn active" aria-label="放行所有请求">放行</button>
+          <button onclick="setInterceptMode('REQ')" id="bp-q-req" class="segmented-btn" aria-label="拦截请求阶段">拦截 REQ</button>
+          <button onclick="setInterceptMode('RESP')" id="bp-q-resp" class="segmented-btn" aria-label="拦截响应阶段">拦截 RESP</button>
+        </div>
+
+        <div class="divider-v"></div>
+
+        <button onclick="openCurlModal()" class="btn btn-pill tactile" aria-label="导入并执行 cURL">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <span>导入 cURL</span>
+        </button>
+
+        <button onclick="exportHarFile()" class="btn btn-pill tactile" aria-label="导出 HAR 文件">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>导出 HAR</span>
+        </button>
+
+        <button id="pause-btn" onclick="toggleCapture()" class="btn btn-pill tactile" aria-label="暂停或继续捕获">
+          <svg id="pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          <span id="pause-label">暂停</span>
+        </button>
+
+        <button onclick="clearTraffic()" class="btn btn-pill tactile" aria-label="清空当前流量会话">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span>清空</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Body -->
+    <div class="workspace-body">
+      <!-- Left 60px Navigation Sidebar -->
+      <aside class="nav-rail">
+        <div class="nav-group" id="sidebar-nav-group">
+          <div id="sidebar-bar" class="sidebar-active-bar" style="transform: translateY(9px);"></div>
+
+          <button onclick="switchPage('traffic', 0)" id="nav-traffic" data-tooltip="实时流量" aria-label="实时流量" class="nav-btn active tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          </button>
+
+          <button onclick="switchPage('breakpoints', 1)" id="nav-breakpoints" data-tooltip="断点拦截" aria-label="断点拦截" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
+            <span id="bp-dot-badge" class="nav-badge hidden"></span>
+          </button>
+
+          <button onclick="switchPage('mock', 2)" id="nav-mock" data-tooltip="本地 Mock" aria-label="本地 Mock" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <span id="mock-dot-badge" class="nav-badge"></span>
+          </button>
+
+          <button onclick="switchPage('throttling', 3)" id="nav-throttling" data-tooltip="弱网仿真" aria-label="弱网仿真" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            <span id="throttle-dot-badge" class="nav-badge hidden"></span>
+          </button>
+
+          <button onclick="switchPage('tools', 4)" id="nav-tools" data-tooltip="工具箱 (⌥T)" aria-label="开发者工具箱" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          </button>
+
+          <button onclick="switchPage('security', 5)" id="nav-security" data-tooltip="HTTPS 根证书" aria-label="HTTPS 根证书" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <button onclick="refreshTrafficList()" data-tooltip="同步后端流量" aria-label="同步后端流量" class="nav-btn tactile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- PAGE 1: LIVE TRAFFIC WORKBENCH -->
+      <main id="page-traffic" class="page-view">
+        <!-- Left Packet Stream Column -->
+        <section class="traffic-sidebar">
+          <div class="traffic-sidebar-header">
+            <div class="traffic-title-row">
+              <span style="font-weight:700;font-size:13px;color:var(--text-secondary);">流量抓包</span>
+              <span id="packet-count-pill" class="count-pill mono">0</span>
+            </div>
+
+            <!-- Search Input with Regex & Clear -->
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input id="search-input" type="text" oninput="handleSearchInput()" placeholder="搜索 URL / 方法 / 状态 (⌘K 或 /)" aria-label="Filter network traffic" class="search-input">
+              <button id="search-clear-btn" onclick="clearSearchInput()" class="search-tool-btn hidden" title="清空搜索">×</button>
+              <button id="regex-btn" onclick="toggleRegexMode()" class="search-tool-btn mono" title="正则匹配">.*</button>
+            </div>
+
+            <!-- Liquid Method Segmented Filter -->
+            <div class="segmented-track" id="method-track" style="width:100%;justify-content:space-between;">
+              <div id="method-slider" class="segmented-pill"></div>
+              <button onclick="setMethodFilter('ALL', this)" class="segmented-btn active mono" style="flex:1;">ALL</button>
+              <button onclick="setMethodFilter('GET', this)" class="segmented-btn mono" style="flex:1;">GET</button>
+              <button onclick="setMethodFilter('POST', this)" class="segmented-btn mono" style="flex:1;">POST</button>
+              <button onclick="setMethodFilter('PUT', this)" class="segmented-btn mono" style="flex:1;">PUT</button>
+              <button onclick="setMethodFilter('DELETE', this)" class="segmented-btn mono" style="flex:1;">DEL</button>
+            </div>
+          </div>
+
+          <!-- Packet Cards Scroll Container -->
+          <div id="packet-list" class="packet-list" onscroll="handleListScroll()">
+            <div class="empty-state" id="list-empty-state">
+              <svg style="width:28px;height:28px;opacity:0.35;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <p style="font-size:12px;">等待流量中... 请向代理端口发送请求</p>
+            </div>
+          </div>
+
+          <!-- Unpinned Floating Pill -->
+          <button id="new-traffic-pill" onclick="scrollToLatest()" class="new-traffic-pill tactile" aria-label="跳转到最新请求">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+            <span id="new-traffic-text">有新流量</span>
+          </button>
+        </section>
+
+        <!-- Right Request/Response Inspector -->
+        <section class="inspector-pane">
+          <!-- Inspector Top Summary Bar -->
+          <div class="inspector-top-bar">
+            <div class="url-summary">
+              <span id="insp-method" class="method-badge solid-dark mono">GET</span>
+              <span id="insp-url" class="inspector-url mono selectable">-</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+              <span id="insp-status" class="status-pill mono">-</span>
+              <span id="insp-latency" class="mono" style="font-size:12px;color:var(--text-secondary);">- ms</span>
+              <button id="copy-curl-btn" onclick="copyCurrentCurl(this)" class="btn btn-pill tactile mono" aria-label="复制为 cURL">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <span>复制 cURL</span>
+              </button>
+              <button onclick="toggleReplayDrawer()" class="btn btn-primary btn-pill tactile" aria-label="编辑并重放此请求">
+                <span>编辑并重放</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Inspector Segmented Sub-navigation -->
+          <div class="inspector-subbar">
+            <div class="segmented-track" id="inspector-tab-track">
+              <div id="inspector-tab-slider" class="segmented-pill"></div>
+              <button onclick="switchInspectorTab('req', this)" data-tab="req" class="segmented-btn active">请求</button>
+              <button onclick="switchInspectorTab('resp', this)" data-tab="resp" class="segmented-btn">响应</button>
+              <button onclick="switchInspectorTab('diff', this)" data-tab="diff" class="segmented-btn">对比 Diff</button>
+              <button onclick="switchInspectorTab('timing', this)" data-tab="timing" class="segmented-btn">时序瀑布</button>
+              <button onclick="switchInspectorTab('code', this)" data-tab="code" class="segmented-btn">代码生成</button>
+            </div>
+
+            <button onclick="sanitizeCurrentPacket()" class="btn btn-sm tactile" title="脱敏 Authorization 与 Cookie" aria-label="脱敏敏感信息">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              <span>一键脱敏</span>
+            </button>
+          </div>
+
+          <!-- Inspector Scroll Body -->
+          <div class="inspector-scroll">
+            <!-- Collapsible In-Situ Replay Studio Drawer -->
+            <div id="replay-drawer" class="replay-drawer-grid">
+              <div class="replay-drawer-inner">
+                <div class="studio-card">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <span class="mono" style="font-size:11.5px;font-weight:700;">IN-SITU REPLAY STUDIO</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <button onclick="toggleReplayDrawer()" class="btn btn-sm tactile">收起</button>
+                      <button onclick="executeInSituReplay()" class="btn btn-primary btn-sm tactile">发送真实重放 (⌘↵)</button>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <select id="replay-method" class="input-field mono" style="width:95px;font-weight:700;">
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="PATCH">PATCH</option>
+                      <option value="DELETE">DELETE</option>
+                      <option value="HEAD">HEAD</option>
+                      <option value="OPTIONS">OPTIONS</option>
+                    </select>
+                    <input id="replay-url" type="text" class="input-field mono" style="flex:1;" placeholder="http://target/api/...">
+                  </div>
+                  <textarea id="replay-body" rows="5" class="textarea-field" placeholder="Request Payload (JSON, text)..."></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 1: REQUEST -->
+            <div id="tab-pane-req">
+              <div class="section-block">
+                <div class="section-header">
+                  <span class="section-label">REQUEST HEADERS</span>
+                  <button onclick="copyHeaders('req', this)" class="btn btn-sm tactile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>复制</span>
+                  </button>
+                </div>
+                <div id="req-headers-table" class="kv-card mono selectable"></div>
+              </div>
+
+              <div class="section-block">
+                <div class="section-header">
+                  <span class="section-label">REQUEST BODY</span>
+                  <div style="display:flex;gap:6px;">
+                    <button onclick="formatRequestJson()" class="btn btn-sm tactile">格式化</button>
+                    <button onclick="copyBody('req', this)" class="btn btn-sm tactile">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>复制</span>
+                    </button>
+                  </div>
+                </div>
+                <pre id="req-body-code" class="code-card selectable"></pre>
+              </div>
+            </div>
+
+            <!-- TAB 2: RESPONSE -->
+            <div id="tab-pane-resp" class="hidden">
+              <div class="section-block">
+                <div class="section-header">
+                  <span class="section-label">RESPONSE HEADERS</span>
+                  <button onclick="copyHeaders('resp', this)" class="btn btn-sm tactile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>复制</span>
+                  </button>
+                </div>
+                <div id="resp-headers-table" class="kv-card mono selectable"></div>
+              </div>
+
+              <div class="section-block">
+                <div class="section-header">
+                  <span class="section-label">RESPONSE BODY</span>
+                  <button onclick="copyBody('resp', this)" class="btn btn-sm tactile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>复制</span>
+                  </button>
+                </div>
+                <pre id="resp-body-code" class="code-card selectable"></pre>
+              </div>
+            </div>
+
+            <!-- TAB 3: DIFF -->
+            <div id="tab-pane-diff" class="hidden">
+              <div class="diff-grid">
+                <div>
+                  <div class="section-header"><span class="section-label">原始基准 (Original)</span></div>
+                  <div id="diff-left-box" class="code-card selectable"></div>
+                </div>
+                <div>
+                  <div class="section-header"><span class="section-label">重放对比 (Replayed Result)</span></div>
+                  <div id="diff-right-box" class="code-card selectable"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 4: TIMING WATERFALL -->
+            <div id="tab-pane-timing" class="hidden">
+              <div class="kv-card" id="timing-waterfall-box" style="padding:16px;"></div>
+            </div>
+
+            <!-- TAB 5: CODE GENERATOR -->
+            <div id="tab-pane-code" class="hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="display:flex;gap:6px;">
+                  <button onclick="setCodeGenLang('curl', this)" class="btn btn-sm btn-primary code-lang-btn">cURL</button>
+                  <button onclick="setCodeGenLang('fetch', this)" class="btn btn-sm code-lang-btn">JS Fetch</button>
+                  <button onclick="setCodeGenLang('python', this)" class="btn btn-sm code-lang-btn">Python</button>
+                  <button onclick="setCodeGenLang('go', this)" class="btn btn-sm code-lang-btn">Go</button>
+                  <button onclick="setCodeGenLang('rust', this)" class="btn btn-sm code-lang-btn">Rust</button>
+                </div>
+                <button onclick="copyGeneratedCode(this)" class="btn btn-sm tactile">复制代码</button>
+              </div>
+              <pre id="codegen-output" class="code-card selectable"></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- PAGE 2: BREAKPOINTS -->
+      <section id="page-breakpoints" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <h2 class="page-heading">断点拦截规则</h2>
+            <button onclick="openAddBpModal()" class="btn btn-primary tactile">+ 新增拦截规则</button>
+          </div>
+
+          <div class="card-box">
+            <div class="card-box-header">
+              <span>拦截过滤匹配表</span>
+              <span class="mono" style="color:var(--text-muted);" id="bp-rule-count">0 Rules</span>
+            </div>
+            <div id="bp-rules-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 3: LOCAL MOCK -->
+      <section id="page-mock" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <h2 class="page-heading">本地 Mock 规则</h2>
+            <button onclick="addMockRule()" class="btn btn-primary tactile">+ 新增 Mock</button>
+          </div>
+
+          <div id="mock-rules-list"></div>
+        </div>
+      </section>
+
+      <!-- PAGE 4: NETWORK THROTTLING -->
+      <section id="page-throttling" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <h2 class="page-heading">弱网仿真与网络延迟</h2>
+          </div>
+
+          <div class="preset-grid">
+            <div onclick="applyThrottlePreset('none', 0, 0)" id="preset-none" class="preset-card active tactile">
+              <div class="preset-title">直连环境</div>
+              <div class="preset-sub mono">0ms · 无延迟</div>
+            </div>
+            <div onclick="applyThrottlePreset('4g', 90, 0)" id="preset-4g" class="preset-card tactile">
+              <div class="preset-title">Fast 4G</div>
+              <div class="preset-sub mono">+90ms RTT</div>
+            </div>
+            <div onclick="applyThrottlePreset('3g', 380, 2)" id="preset-3g" class="preset-card tactile">
+              <div class="preset-title">Slow 3G</div>
+              <div class="preset-sub mono">+380ms · 2% 抖动</div>
+            </div>
+            <div onclick="applyThrottlePreset('offline', 0, 100)" id="preset-offline" class="preset-card tactile">
+              <div class="preset-title">模拟断网</div>
+              <div class="preset-sub mono">100% 丢包中断</div>
+            </div>
+          </div>
+
+          <div class="card-box" style="padding:18px;">
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-weight:600;">附加 RTT 延迟</span>
+                <span id="slider-latency-label" class="mono" style="font-weight:700;">0 ms</span>
+              </div>
+              <input id="slider-latency" type="range" min="0" max="2000" step="20" value="0" oninput="updateCustomThrottle()">
+            </div>
+
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-weight:600;">丢包率 (Packet Loss)</span>
+                <span id="slider-loss-label" class="mono" style="font-weight:700;">0 %</span>
+              </div>
+              <input id="slider-loss" type="range" min="0" max="100" step="1" value="0" oninput="updateCustomThrottle()">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 5: DEVELOPER TOOLBOX -->
+      <section id="page-tools" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <h2 class="page-heading">开发者工具箱</h2>
+          </div>
+
+          <!-- JWT Inspector -->
+          <div class="card-box">
+            <div class="card-box-header">
+              <span>JWT 解码器 (Header & Payload)</span>
+              <button onclick="runJwtDecode()" class="btn btn-sm btn-primary tactile">解码 Token</button>
+            </div>
+            <div style="padding:14px;">
+              <textarea id="jwt-input" rows="2" class="textarea-field" style="margin-bottom:10px;" placeholder="粘贴 JWT 字符串（Bearer eyJhbG...）"></textarea>
+              <div class="diff-grid">
+                <div>
+                  <div class="section-label" style="margin-bottom:4px;">HEADER</div>
+                  <pre id="jwt-header-out" class="code-card selectable">// Header 将在此处展示</pre>
+                </div>
+                <div>
+                  <div class="section-label" style="margin-bottom:4px;">PAYLOAD</div>
+                  <pre id="jwt-payload-out" class="code-card selectable">// Payload 将在此处展示</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Base64 & Timestamp -->
+          <div class="diff-grid">
+            <div class="card-box">
+              <div class="card-box-header"><span>UTF-8 安全 Base64 / URL 编解码</span></div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+                <input id="codec-input" type="text" placeholder="输入待编码/解码文本" class="input-field mono">
+                <div style="display:flex;gap:6px;">
+                  <button onclick="runCodec('b64e')" class="btn btn-sm btn-primary tactile">Base64 编码</button>
+                  <button onclick="runCodec('b64d')" class="btn btn-sm tactile">Base64 解码</button>
+                  <button onclick="runCodec('urle')" class="btn btn-sm tactile">URL 编码</button>
+                  <button onclick="runCodec('urld')" class="btn btn-sm tactile">URL 解码</button>
+                </div>
+                <pre id="codec-output" class="code-card selectable" style="min-height:42px;">// 转换结果</pre>
+              </div>
+            </div>
+
+            <div class="card-box">
+              <div class="card-box-header">
+                <span>Unix 时间戳 & UUID v4</span>
+                <button onclick="generateUuid()" class="btn btn-sm tactile">生成 UUID</button>
+              </div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:6px;">
+                  <input id="ts-input" type="text" placeholder="输入秒/毫秒时间戳" class="input-field mono" style="flex:1;">
+                  <button onclick="setNowTimestamp()" class="btn btn-sm tactile">当前时刻</button>
+                  <button onclick="runTimestampConvert()" class="btn btn-sm btn-primary tactile">转换</button>
+                </div>
+                <pre id="ts-output" class="code-card selectable" style="min-height:42px;">// 转换结果</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 6: ROOT CA & HTTPS -->
+      <section id="page-security" class="page-view hidden">
+        <div class="standalone-container">
+          <div class="page-header-row">
+            <h2 class="page-heading">HTTPS 根证书管理</h2>
+            <button onclick="downloadCaFile()" class="btn btn-primary tactile">下载 wiretap-ca.crt</button>
+          </div>
+
+          <div class="card-box">
+            <div class="card-box-header">
+              <span>WireTap Local Root CA</span>
+              <span class="status-pill mono">X.509 · SHA256</span>
+            </div>
+            <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+              <p style="color:var(--text-secondary);font-size:12px;">WireTap 基于 Hudsucker 生成本地专有自签根证书。安装并信任该根证书后，即可对局域网与客户端的 HTTPS 流量进行解密审计。</p>
+              <div>
+                <div class="section-label" style="margin-bottom:6px;">macOS 信任命令</div>
+                <pre class="code-card selectable">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain wiretap-ca.crt</pre>
+              </div>
+              <div>
+                <div class="section-label" style="margin-bottom:6px;">Windows PowerShell (管理员)</div>
+                <pre class="code-card selectable">Import-Certificate -FilePath ".\wiretap-ca.crt" -CertStoreLocation Cert:\LocalMachine\Root</pre>
+              </div>
+              <div>
+                <div class="section-label" style="margin-bottom:6px;">Linux (Ubuntu / Debian)</div>
+                <pre class="code-card selectable">sudo cp wiretap-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- cURL Import Modal -->
+  <div id="curl-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:14px;">导入并执行 cURL 命令</span>
+        <button onclick="closeCurlModal()" class="btn btn-sm">ESC</button>
+      </div>
+      <textarea id="curl-modal-input" rows="6" class="textarea-field" placeholder="curl -X POST https://httpbin.org/post -H 'Content-Type: application/json' -d '{&quot;test&quot;:&quot;value&quot;}'"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button onclick="closeCurlModal()" class="btn tactile">取消</button>
+        <button onclick="submitCurlImport()" class="btn btn-primary tactile">执行请求</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Breakpoint Modal -->
+  <div id="bp-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:14px;">新增断点规则</span>
+        <button onclick="closeAddBpModal()" class="btn btn-sm">ESC</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <select id="new-bp-method" class="input-field mono" style="width:100px;">
+          <option value="ALL">ALL</option>
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+        <input id="new-bp-pattern" type="text" placeholder="/api/v1/* 或关键字" class="input-field mono" style="flex:1;">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="closeAddBpModal()" class="btn tactile">取消</button>
+        <button onclick="confirmAddBpRule()" class="btn btn-primary tactile">保存规则</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Toast -->
+  <div id="toast" class="toast-capsule" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span id="toast-text">已复制到剪贴板</span>
+  </div>
+
+  <script>
+    // --- State & Reactive Store ---
+    let packets = [];
+    let selectedPacketId = null;
+    let currentMethodFilter = 'ALL';
+    let currentInspectorTab = 'req';
+    let currentCodeLang = 'curl';
+    let searchRegexMode = false;
+    let isCapturing = true;
+    let isListUnpinned = false;
+    let unreadTrafficCount = 0;
+    let interceptMode = 'OFF';
+    let extraThrottleLatency = 0;
+    let throttleLossRate = 0;
+    let lastDiffOrigin = null;
+    let lastDiffMutated = null;
+
+    // Load user persistent rules from localStorage
+    let bpRules = JSON.parse(localStorage.getItem('wiretap_bp_rules') || '[]');
+    let mockRules = JSON.parse(localStorage.getItem('wiretap_mock_rules') || '[]');
+
+    // --- Data Normalizer (Converts backend TrafficEntry to unified UI model) ---
+    function normalizePacket(raw) {
+      if (!raw) return null;
+
+      // Extract headers as dictionary & list
+      let reqHeadersDict = {};
+      let reqHeadersList = [];
+      if (Array.isArray(raw.request_headers)) {
+        reqHeadersList = raw.request_headers;
+        raw.request_headers.forEach(h => { reqHeadersDict[h.key] = h.value; });
+      } else if (raw.request_headers && typeof raw.request_headers === 'object') {
+        reqHeadersDict = raw.request_headers;
+        reqHeadersList = Object.entries(raw.request_headers).map(([key, value]) => ({ key, value }));
+      }
+
+      let respHeadersDict = {};
+      let respHeadersList = [];
+      if (Array.isArray(raw.response_headers)) {
+        respHeadersList = raw.response_headers;
+        raw.response_headers.forEach(h => { respHeadersDict[h.key] = h.value; });
+      } else if (raw.response_headers && typeof raw.response_headers === 'object') {
+        respHeadersDict = raw.response_headers;
+        respHeadersList = Object.entries(raw.response_headers).map(([key, value]) => ({ key, value }));
+      }
+
+      return {
+        id: String(raw.id || Date.now()),
+        method: String(raw.method || 'GET').toUpperCase(),
+        url: raw.full_url || raw.url || (raw.path ? `${location.origin}${raw.path}` : '-'),
+        path: raw.path || (raw.full_url ? new URL(raw.full_url, 'http://localhost').pathname : '-'),
+        query: raw.query || null,
+        status: Number(raw.status || 200),
+        status_text: raw.status_text || 'OK',
+        latency: Number(raw.duration_ms ?? raw.latency ?? 0),
+        time: raw.time_str || raw.time || new Date().toLocaleTimeString(),
+        replayed: Boolean(raw.is_replay || raw.replayed),
+        reqHeaders: reqHeadersDict,
+        reqHeadersList,
+        reqBody: raw.request_body ?? raw.reqBody ?? '',
+        respHeaders: respHeadersDict,
+        respHeadersList,
+        respBody: raw.response_body ?? raw.respBody ?? '',
+        respContentType: raw.response_content_type || respHeadersDict['content-type'] || ''
+      };
+    }
+
+    // --- Real Backend Network Layer (WebSocket & SSE fallback) ---
+    let ws = null;
+    let sseSource = null;
+
+    function initBackendConnection() {
+      const host = window.location.host || '127.0.0.1:9090';
+      const wsUrl = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/api/ws`;
+
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+          setConnStatus('connected', host);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isCapturing) return;
+          try {
+            const raw = JSON.parse(event.data);
+            const packet = normalizePacket(raw);
+            if (packet) handleIncomingPacket(packet);
+          } catch (e) {
+            console.error('Failed to parse WebSocket packet:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          setConnStatus('paused', host);
+          // Fallback to SSE after brief pause
+          setTimeout(initSseFallback, 2500);
+        };
+
+        ws.onerror = () => {
+          setConnStatus('error', host);
+        };
+      } catch (e) {
+        initSseFallback();
+      }
+
+      // Initial Fetch of historical records
+      refreshTrafficList();
+      fetchStatus();
+    }
+
+    function initSseFallback() {
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+      if (sseSource) sseSource.close();
+
+      try {
+        sseSource = new EventSource('/api/events');
+        sseSource.onopen = () => setConnStatus('connected', window.location.host);
+        sseSource.onmessage = (e) => {
+          if (!isCapturing) return;
+          try {
+            const packet = normalizePacket(JSON.parse(e.data));
+            if (packet) handleIncomingPacket(packet);
+          } catch (err) {}
+        };
+        sseSource.onerror = () => setConnStatus('error', window.location.host);
+      } catch (err) {}
+    }
+
+    function setConnStatus(status, text) {
+      const dot = document.getElementById('proxy-dot');
+      const addr = document.getElementById('proxy-addr');
+      dot.className = `status-dot pulsing ${status}`;
+      if (text) addr.textContent = text;
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.target) {
+            document.getElementById('proxy-addr').textContent = `-> ${data.target}`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function refreshTrafficList() {
+      try {
+        const res = await fetch('/api/list');
+        if (res.ok) {
+          const rawList = await res.json();
+          packets = (rawList || []).map(normalizePacket).reverse(); // Newest first
+          if (!selectedPacketId && packets.length > 0) {
+            selectedPacketId = packets[0].id;
+          }
+          renderPacketList();
+          renderInspector();
+        }
+      } catch (e) {
+        console.warn('Initial load error:', e);
+      }
+    }
+
+    function handleIncomingPacket(packet) {
+      // Check for breakpoint match
+      if (interceptMode !== 'OFF') {
+        const matched = bpRules.some(r => {
+          const mMatch = r.method === 'ALL' || r.method === packet.method;
+          const pMatch = packet.path.includes(r.pattern) || packet.url.includes(r.pattern);
+          return mMatch && pMatch;
+        });
+
+        if (matched) {
+          showDynamicIsland(packet);
+        }
+      }
+
+      // Insert into local list
+      packets.unshift(packet);
+      if (packets.length > 1000) packets.pop();
+
+      if (!selectedPacketId || packets.length === 1) {
+        selectedPacketId = packet.id;
+        renderInspector();
+      } else if (isListUnpinned) {
+        unreadTrafficCount++;
+        const pill = document.getElementById('new-traffic-pill');
+        document.getElementById('new-traffic-text').textContent = `${unreadTrafficCount} 条新流量`;
+        pill.classList.add('visible');
+      }
+
+      renderPacketList();
+    }
+
+    // --- Liquid Segmented Pill Animator ---
+    function moveSegmentedPill(trackId, pillId, targetBtn) {
+      const track = document.getElementById(trackId);
+      const pill = document.getElementById(pillId);
+      if (!track || !pill || !targetBtn) return;
+
+      const trackRect = track.getBoundingClientRect();
+      const btnRect = targetBtn.getBoundingClientRect();
+      const targetLeft = btnRect.left - trackRect.left;
+      const targetWidth = btnRect.width;
+
+      pill.style.width = `${targetWidth}px`;
+      pill.style.transform = `translate3d(${targetLeft}px, 0, 0)`;
+    }
+
+    // --- Navigation ---
+    function switchPage(pageKey, index) {
+      const pages = ['traffic', 'breakpoints', 'mock', 'throttling', 'tools', 'security'];
+      pages.forEach(k => {
+        const el = document.getElementById(`page-${k}`);
+        const nav = document.getElementById(`nav-${k}`);
+        if (el) el.classList.toggle('hidden', k !== pageKey);
+        if (nav) nav.classList.toggle('active', k === pageKey);
+      });
+
+      const bar = document.getElementById('sidebar-bar');
+      if (bar) {
+        bar.style.transform = `translateY(${9 + index * 48}px)`;
+      }
+
+      if (pageKey === 'traffic') {
+        requestAnimationFrame(syncAllPills);
+      } else if (pageKey === 'tools') {
+        runJwtDecode();
+      }
+    }
+
+    // --- Render Traffic Stream ---
+    function renderPacketList() {
+      const listEl = document.getElementById('packet-list');
+      const query = document.getElementById('search-input').value.trim();
+
+      const filtered = packets.filter(p => {
+        if (currentMethodFilter !== 'ALL' && p.method !== currentMethodFilter) return false;
+        if (!query) return true;
+        const hay = `${p.method} ${p.url} ${p.path} ${p.status}`;
+        if (searchRegexMode) {
+          try {
+            return new RegExp(query, 'i').test(hay);
+          } catch {
+            return hay.toLowerCase().includes(query.toLowerCase());
+          }
+        }
+        return hay.toLowerCase().includes(query.toLowerCase());
+      });
+
+      document.getElementById('packet-count-pill').textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <svg style="width:26px;height:26px;opacity:0.3;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            <p style="font-size:12px;">无匹配流量记录</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(p => {
+        const isSelected = p.id === selectedPacketId;
+        const isDarkMethod = p.method === 'POST' || p.method === 'PUT';
+        const isErrStatus = p.status >= 400;
+        const fillPct = Math.min(100, Math.max(14, Math.round((p.latency / 400) * 100)));
+
+        return `
+          <div onclick="selectPacket('${p.id}')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')selectPacket('${p.id}')" class="packet-card ${isSelected ? 'active' : ''}">
+            <!-- tabIndex = 0 a11y keyboard focus enabled -->
+            <div class="packet-row-top">
+              <span class="method-badge mono ${isDarkMethod ? 'solid-dark' : ''}">${p.method}</span>
+              <span class="packet-path mono" title="${escapeHtml(p.path)}">${escapeHtml(p.path)}</span>
+              ${p.replayed ? '<span class="replay-tag mono">REPLAY</span>' : ''}
+            </div>
+            <div class="packet-row-bottom mono">
+              <div class="packet-meta-left">
+                <span class="status-pill ${isErrStatus ? 'err' : ''}">${p.status}</span>
+                <div class="latency-track">
+                  <div class="latency-fill" style="width:${fillPct}%;"></div>
+                </div>
+                <span class="packet-latency">${p.latency}ms</span>
+              </div>
+              <span class="packet-time">${p.time}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectPacket(id) {
+      selectedPacketId = String(id);
+      renderPacketList();
+      renderInspector();
+    }
+
+    function getSelectedPacket() {
+      return packets.find(p => p.id === selectedPacketId) || packets[0] || null;
+    }
+
+    function renderInspector() {
+      const p = getSelectedPacket();
+      if (!p) {
+        document.getElementById('insp-method').textContent = '-';
+        document.getElementById('insp-url').textContent = '未选择流量';
+        document.getElementById('insp-status').textContent = '-';
+        document.getElementById('insp-latency').textContent = '-';
+        document.getElementById('req-headers-table').innerHTML = '<div style="padding:14px;color:var(--text-muted);">暂无选中的请求数据</div>';
+        document.getElementById('req-body-code').textContent = '// 暂无数据';
+        document.getElementById('resp-headers-table').innerHTML = '<div style="padding:14px;color:var(--text-muted);">暂无选中的响应数据</div>';
+        document.getElementById('resp-body-code').textContent = '// 暂无数据';
+        return;
+      }
+
+      document.getElementById('insp-method').textContent = p.method;
+      document.getElementById('insp-url').textContent = p.url;
+      document.getElementById('insp-url').title = p.url;
+
+      const statusEl = document.getElementById('insp-status');
+      statusEl.textContent = `${p.status} ${p.status_text || ''}`;
+      statusEl.className = `status-pill mono ${p.status >= 400 ? 'err' : ''}`;
+
+      document.getElementById('insp-latency').textContent = `${p.latency} ms`;
+
+      // Fill Replay Drawer
+      document.getElementById('replay-method').value = p.method;
+      document.getElementById('replay-url').value = p.url;
+      document.getElementById('replay-body').value = p.reqBody || '';
+
+      // Render Headers
+      const renderKv = (headers) => {
+        if (!headers || headers.length === 0) {
+          return '<div style="padding:10px 14px;color:var(--text-muted);font-style:italic;">(无请求头)</div>';
+        }
+        return headers.map(h => `
+          <div class="kv-row">
+            <div class="kv-key" title="${escapeHtml(h.key)}">${escapeHtml(h.key)}</div>
+            <div class="kv-val selectable">${escapeHtml(h.value)}</div>
+          </div>
+        `).join('');
+      };
+
+      document.getElementById('req-headers-table').innerHTML = renderKv(p.reqHeadersList);
+      document.getElementById('resp-headers-table').innerHTML = renderKv(p.respHeadersList);
+
+      // Render Bodies (format json if valid)
+      document.getElementById('req-body-code').textContent = tryFormatJson(p.reqBody) || '// (Empty Request Body)';
+      document.getElementById('resp-body-code').textContent = tryFormatJson(p.respBody) || '// (Empty Response Body)';
+
+      renderDiffPane(p);
+      renderTimingWaterfall(p);
+      renderCodeGenerator(p);
+    }
+
+    function tryFormatJson(str) {
+      if (!str) return '';
+      try {
+        const obj = JSON.parse(str);
+        return JSON.stringify(obj, null, 2);
+      } catch {
+        return str;
+      }
+    }
+
+    function formatRequestJson() {
+      const p = getSelectedPacket();
+      if (!p || !p.reqBody) return;
+      try {
+        const parsed = JSON.parse(p.reqBody);
+        p.reqBody = JSON.stringify(parsed, null, 2);
+        document.getElementById('req-body-code').textContent = p.reqBody;
+        document.getElementById('replay-body').value = p.reqBody;
+        showToast('JSON 已格式化');
+      } catch {
+        showToast('不是标准的 JSON 文本');
+      }
+    }
+
+    // --- In-Situ Replay (Real Network Execution) ---
+    function toggleReplayDrawer() {
+      const drawer = document.getElementById('replay-drawer');
+      drawer.classList.toggle('open');
+      if (drawer.classList.contains('open')) {
+        setTimeout(() => document.getElementById('replay-body').focus(), 120);
+      }
+    }
+
+    async function executeInSituReplay() {
+      const orig = getSelectedPacket();
+      if (!orig) return;
+
+      const method = document.getElementById('replay-method').value;
+      const url = document.getElementById('replay-url').value.trim() || orig.url;
+      const body = document.getElementById('replay-body').value;
+
+      showToast('正在向目标发送真实重放...');
+      const startTime = performance.now();
+
+      try {
+        // First try dedicated backend replay endpoint if ID matches & URL unchanged
+        if (url === orig.url && method === orig.method && body === orig.reqBody) {
+          const res = await fetch(`/api/replay/${orig.id}`, { method: 'POST' });
+          if (res.ok) {
+            const replayedRaw = await res.json();
+            const replayedPacket = normalizePacket(replayedRaw);
+            lastDiffOrigin = orig;
+            lastDiffMutated = replayedPacket;
+            handleIncomingPacket(replayedPacket);
+            selectedPacketId = replayedPacket.id;
+            document.getElementById('replay-drawer').classList.remove('open');
+            renderPacketList();
+            renderInspector();
+            showDiffTab();
+            showToast('真实重放成功！');
+            return;
+          }
+        }
+
+        // Direct fetch request fallback
+        const headers = { ...orig.reqHeaders, 'X-WireTap-Replayed': 'true' };
+        delete headers['host'];
+        delete headers['content-length'];
+
+        const reqInit = {
+          method,
+          headers,
+          body: (method !== 'GET' && method !== 'HEAD' && body) ? body : undefined
+        };
+
+        const resp = await fetch(url, reqInit);
+        const duration = Math.round(performance.now() - startTime);
+        const respText = await resp.text();
+
+        let respHeadersList = [];
+        resp.headers.forEach((value, key) => respHeadersList.push({ key, value }));
+
+        const mutatedPacket = {
+          id: 'replay-' + Date.now(),
+          method,
+          url,
+          path: new URL(url, location.origin).pathname,
+          status: resp.status,
+          status_text: resp.statusText || 'OK',
+          latency: duration,
+          time: new Date().toLocaleTimeString(),
+          replayed: true,
+          reqHeaders: headers,
+          reqHeadersList: Object.entries(headers).map(([key, value]) => ({ key, value })),
+          reqBody: body,
+          respHeaders: Object.fromEntries(respHeadersList.map(h => [h.key, h.value])),
+          respHeadersList,
+          respBody: respText
+        };
+
+        lastDiffOrigin = orig;
+        lastDiffMutated = mutatedPacket;
+        handleIncomingPacket(mutatedPacket);
+        selectedPacketId = mutatedPacket.id;
+
+        document.getElementById('replay-drawer').classList.remove('open');
+        renderPacketList();
+        renderInspector();
+        showDiffTab();
+        showToast(`重放完成 · 响应 ${resp.status} (${duration}ms)`);
+      } catch (err) {
+        showToast('重放请求失败: ' + err.message);
+      }
+    }
+
+    function showDiffTab() {
+      const diffBtn = document.querySelector('#inspector-tab-track button[data-tab="diff"]');
+      if (diffBtn) switchInspectorTab('diff', diffBtn);
+    }
+
+    // --- Diff Calculation ---
+    function renderDiffPane(p) {
+      const leftBox = document.getElementById('diff-left-box');
+      const rightBox = document.getElementById('diff-right-box');
+
+      const origText = (lastDiffOrigin ? (lastDiffOrigin.respBody || lastDiffOrigin.reqBody) : (p.respBody || p.reqBody)) || '';
+      const nextText = (lastDiffMutated ? (lastDiffMutated.respBody || lastDiffMutated.reqBody) : (p.respBody)) || '';
+
+      const origLines = origText.split('\n');
+      const nextLines = nextText.split('\n');
+      const maxLen = Math.max(origLines.length, nextLines.length);
+
+      let leftHtml = '';
+      let rightHtml = '';
+
+      for (let i = 0; i < maxLen; i++) {
+        const l = origLines[i] ?? '';
+        const r = nextLines[i] ?? '';
+        const changed = l !== r;
+        leftHtml += `<div class="diff-line">${escapeHtml(l || ' ')}</div>`;
+        rightHtml += `<div class="diff-line ${changed ? 'diff-changed' : ''}">${escapeHtml(r || ' ')}</div>`;
+      }
+
+      leftBox.innerHTML = leftHtml || '<div class="diff-line">// 无对比基准</div>';
+      rightBox.innerHTML = rightHtml || '<div class="diff-line">// 发送重放后将自动在此对比差异</div>';
+    }
+
+    // --- Timing Waterfall ---
+    function renderTimingWaterfall(p) {
+      const box = document.getElementById('timing-waterfall-box');
+      const total = Math.max(6, p.latency);
+      const phases = [
+        { name: 'DNS & TCP 握手', ms: Math.max(1, Math.round(total * 0.18)), offset: 0 },
+        { name: 'TLS 加密建连', ms: Math.max(1, Math.round(total * 0.22)), offset: 18 },
+        { name: '等待响应 (TTFB)', ms: Math.max(2, Math.round(total * 0.45)), offset: 40 },
+        { name: '内容接收 Download', ms: Math.max(1, Math.round(total * 0.15)), offset: 85 }
+      ];
+
+      box.innerHTML = phases.map(ph => `
+        <div style="display:grid;grid-template-columns:140px 1fr 60px;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #F3F4F6;" class="mono">
+          <span style="color:var(--text-secondary);font-size:11.5px;">${ph.name}</span>
+          <div style="height:7px;background:#F2F4F7;border-radius:999px;position:relative;overflow:hidden;">
+            <div style="position:absolute;left:${ph.offset}%;width:${Math.max(6, Math.round((ph.ms / total) * 100))}%;top:0;bottom:0;background:#0A0A0A;border-radius:999px;"></div>
+          </div>
+          <span style="text-align:right;font-weight:600;font-size:11.5px;">${ph.ms} ms</span>
+        </div>
+      `).join('');
+    }
+
+    // --- Code Generator ---
+    function setCodeGenLang(lang, btnEl) {
+      currentCodeLang = lang;
+      document.querySelectorAll('.code-lang-btn').forEach(b => b.classList.remove('btn-primary'));
+      if (btnEl) btnEl.classList.add('btn-primary');
+      renderCodeGenerator(getSelectedPacket());
+    }
+
+    function buildCurlString(p) {
+      if (!p) return '';
+      const headers = Object.entries(p.reqHeaders)
+        .filter(([k]) => k.toLowerCase() !== 'host' && k.toLowerCase() !== 'content-length')
+        .map(([k, v]) => `  -H '${k}: ${v}'`)
+        .join(' \\\n');
+      const bodyPart = (p.reqBody && p.method !== 'GET') ? ` \\\n  -d '${p.reqBody.replace(/'/g, "\\'")}'` : '';
+      return `curl -X ${p.method} '${p.url}' \\\n${headers}${bodyPart}`;
+    }
+
+    function renderCodeGenerator(p) {
+      if (!p) return;
+      const out = document.getElementById('codegen-output');
+      if (currentCodeLang === 'curl') {
+        out.textContent = buildCurlString(p);
+      } else if (currentCodeLang === 'fetch') {
+        out.textContent = `const res = await fetch("${p.url}", {\n  method: "${p.method}",\n  headers: ${JSON.stringify(p.reqHeaders, null, 4)}${p.reqBody ? `,\n  body: JSON.stringify(${p.reqBody})` : ''}\n});\nconst data = await res.json();`;
+      } else if (currentCodeLang === 'python') {
+        out.textContent = `import requests\n\nresp = requests.request(\n    "${p.method}",\n    "${p.url}",\n    headers=${JSON.stringify(p.reqHeaders, null, 4)}${p.reqBody ? `,\n    data='''${p.reqBody}'''` : ''}\n)\nprint(resp.status_code, resp.text)`;
+      } else if (currentCodeLang === 'go') {
+        out.textContent = `req, _ := http.NewRequest("${p.method}", "${p.url}", ${p.reqBody ? `strings.NewReader(\`${p.reqBody}\`)` : 'nil'})\nresp, err := http.DefaultClient.Do(req)`;
+      } else if (currentCodeLang === 'rust') {
+        out.textContent = `let client = reqwest::Client::new();\nlet res = client.${p.method.toLowerCase()}("${p.url}")\n    .send()\n    .await?;`;
+      }
+    }
+
+    // --- Segmented Switchers ---
+    function setMethodFilter(method, btnEl) {
+      currentMethodFilter = method;
+      document.querySelectorAll('#method-track .segmented-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) {
+        btnEl.classList.add('active');
+        moveSegmentedPill('method-track', 'method-slider', btnEl);
+      }
+      renderPacketList();
+    }
+
+    function switchInspectorTab(tabKey, btnEl) {
+      currentInspectorTab = tabKey;
+      document.querySelectorAll('#inspector-tab-track .segmented-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) {
+        btnEl.classList.add('active');
+        moveSegmentedPill('inspector-tab-track', 'inspector-tab-slider', btnEl);
+      }
+
+      ['req', 'resp', 'diff', 'timing', 'code'].forEach(k => {
+        const pane = document.getElementById(`tab-pane-${k}`);
+        if (pane) pane.classList.toggle('hidden', k !== tabKey);
+      });
+    }
+
+    // --- Search & Regex ---
+    function handleSearchInput() {
+      const val = document.getElementById('search-input').value;
+      document.getElementById('search-clear-btn').classList.toggle('hidden', !val);
+      renderPacketList();
+    }
+
+    function clearSearchInput() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      renderPacketList();
+      input.focus();
+    }
+
+    function toggleRegexMode() {
+      searchRegexMode = !searchRegexMode;
+      document.getElementById('regex-btn').classList.toggle('active', searchRegexMode);
+      renderPacketList();
+      showToast(searchRegexMode ? '已开启正则搜索' : '已关闭正则搜索');
+    }
+
+    // --- Scroll & Unpinning ---
+    function handleListScroll() {
+      const el = document.getElementById('packet-list');
+      isListUnpinned = el.scrollTop > 35;
+      if (!isListUnpinned) {
+        unreadTrafficCount = 0;
+        document.getElementById('new-traffic-pill').classList.remove('visible');
+      }
+    }
+
+    function scrollToLatest() {
+      const el = document.getElementById('packet-list');
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+      unreadTrafficCount = 0;
+      document.getElementById('new-traffic-pill').classList.remove('visible');
+    }
+
+    // --- Clipboard Helpers ---
+    function copyTextToClipboard(text, btnEl, toastMsg) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          triggerCopySuccess(btnEl, toastMsg);
+        }).catch(() => fallbackCopy(text, btnEl, toastMsg));
+      } else {
+        fallbackCopy(text, btnEl, toastMsg);
+      }
+    }
+
+    function fallbackCopy(text, btnEl, toastMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      triggerCopySuccess(btnEl, toastMsg);
+    }
+
+    function triggerCopySuccess(btnEl, toastMsg) {
+      if (btnEl) {
+        const origHtml = btnEl.innerHTML;
+        btnEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg><span>已复制</span>`;
+        setTimeout(() => { btnEl.innerHTML = origHtml; }, 1400);
+      }
+      showToast(toastMsg || '已复制到剪贴板');
+    }
+
+    async function copyCurrentCurl(btnEl) {
+      const p = getSelectedPacket();
+      if (!p) return;
+
+      // Try fetching server-sanitized curl
+      try {
+        const res = await fetch(`/api/curl/${p.id}`);
+        if (res.ok) {
+          const curl = await res.text();
+          copyTextToClipboard(curl, btnEl, 'cURL 已复制');
+          return;
+        }
+      } catch (e) {}
+
+      copyTextToClipboard(buildCurlString(p), btnEl, 'cURL 已复制');
+    }
+
+    function copyHeaders(type, btnEl) {
+      const p = getSelectedPacket();
+      if (!p) return;
+      const h = type === 'req' ? p.reqHeaders : p.respHeaders;
+      copyTextToClipboard(JSON.stringify(h, null, 2), btnEl, 'Headers 已复制');
+    }
+
+    function copyBody(type, btnEl) {
+      const p = getSelectedPacket();
+      if (!p) return;
+      const b = type === 'req' ? p.reqBody : p.respBody;
+      copyTextToClipboard(b || '', btnEl, 'Body 已复制');
+    }
+
+    function copyGeneratedCode(btnEl) {
+      const code = document.getElementById('codegen-output').textContent;
+      copyTextToClipboard(code, btnEl, '代码已复制');
+    }
+
+    function sanitizeCurrentPacket() {
+      const p = getSelectedPacket();
+      if (!p) return;
+      ['authorization', 'cookie', 'x-api-key', 'token'].forEach(k => {
+        Object.keys(p.reqHeaders).forEach(headerKey => {
+          if (headerKey.toLowerCase() === k) {
+            p.reqHeaders[headerKey] = '[REDACTED]';
+          }
+        });
+      });
+      p.reqHeadersList = Object.entries(p.reqHeaders).map(([key, value]) => ({ key, value }));
+      renderInspector();
+      showToast('敏感授权凭证已脱敏');
+    }
+
+    // --- Breakpoint Mode & Dynamic Island ---
+    function setInterceptMode(mode) {
+      interceptMode = mode;
+      ['off', 'req', 'resp'].forEach(k => {
+        const b = document.getElementById(`bp-q-${k}`);
+        if (b) b.classList.toggle('active', k.toUpperCase() === mode);
+      });
+
+      const dotBadge = document.getElementById('bp-dot-badge');
+      dotBadge.classList.toggle('hidden', mode === 'OFF');
+      showToast(mode === 'OFF' ? '已关闭断点拦截' : `断点拦截已激活 (${mode})`);
+    }
+
+    function showDynamicIsland(packet) {
+      const island = document.getElementById('dynamic-island');
+      document.getElementById('island-text').textContent = `命中断点: ${packet.method} ${packet.path}`;
+      island.classList.add('active');
+    }
+
+    function resolveIntercept(action) {
+      const island = document.getElementById('dynamic-island');
+      island.classList.remove('active');
+      if (action === 'mutate') {
+        switchPage('traffic', 0);
+        const drawer = document.getElementById('replay-drawer');
+        drawer.classList.add('open');
+        showToast('已载入重放修改器');
+      } else if (action === 'forward') {
+        showToast('请求已放行');
+      } else {
+        showToast('已丢弃拦截请求');
+      }
+    }
+
+    // --- Session Control ---
+    function toggleCapture() {
+      isCapturing = !isCapturing;
+      const dot = document.getElementById('proxy-dot');
+      const label = document.getElementById('pause-label');
+      dot.classList.toggle('pulsing', isCapturing);
+      dot.classList.toggle('paused', !isCapturing);
+      label.textContent = isCapturing ? '暂停' : '继续';
+      showToast(isCapturing ? '已恢复实时流量捕获' : '已暂停捕获 (Space)');
+    }
+
+    async function clearTraffic() {
+      try {
+        await fetch('/api/clear', { method: 'POST' });
+      } catch (e) {}
+
+      packets = [];
+      selectedPacketId = null;
+      document.getElementById('packet-count-pill').textContent = '0';
+      renderPacketList();
+      renderInspector();
+      showToast('已清空所有流量记录');
+    }
+
+    // --- Breakpoint Rules Management ---
+    function renderBpRules() {
+      const container = document.getElementById('bp-rules-list');
+      document.getElementById('bp-rule-count').textContent = `${bpRules.length} Rules`;
+      if (bpRules.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">暂无拦截规则，点击右上角新增</div>';
+        return;
+      }
+      container.innerHTML = bpRules.map(r => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #F1F3F5;" class="mono">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="method-badge solid-dark">${r.method}</span>
+            <span style="font-weight:600;">${escapeHtml(r.pattern)}</span>
+          </div>
+          <button onclick="deleteBpRule(${r.id})" class="btn btn-sm">删除</button>
+        </div>
+      `).join('');
+    }
+
+    function deleteBpRule(id) {
+      bpRules = bpRules.filter(r => r.id !== id);
+      localStorage.setItem('wiretap_bp_rules', JSON.stringify(bpRules));
+      renderBpRules();
+      showToast('已删除拦截规则');
+    }
+
+    function openAddBpModal() {
+      document.getElementById('bp-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('new-bp-pattern').focus(), 60);
+    }
+
+    function closeAddBpModal() {
+      document.getElementById('bp-modal').classList.add('hidden');
+    }
+
+    function confirmAddBpRule() {
+      const method = document.getElementById('new-bp-method').value;
+      const pattern = document.getElementById('new-bp-pattern').value.trim();
+      if (!pattern) return;
+      bpRules.push({ id: Date.now(), method, pattern });
+      localStorage.setItem('wiretap_bp_rules', JSON.stringify(bpRules));
+      renderBpRules();
+      closeAddBpModal();
+      showToast('已添加拦截规则');
+    }
+
+    // --- Mock Rules Management ---
+    function renderMockRules() {
+      const box = document.getElementById('mock-rules-list');
+      if (mockRules.length === 0) {
+        box.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted);font-size:12px;">暂无本地 Mock 规则</div>';
+        return;
+      }
+      box.innerHTML = mockRules.map(m => `
+        <div class="card-box">
+          <div class="card-box-header mono">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="method-badge solid-dark">${m.method}</span>
+              <span>${escapeHtml(m.pattern)}</span>
+              <span class="status-pill">${m.status}</span>
+            </div>
+            <button onclick="deleteMockRule(${m.id})" class="btn btn-sm">移除</button>
+          </div>
+          <div style="padding:12px 16px;">
+            <pre class="code-card selectable">${escapeHtml(m.body)}</pre>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addMockRule() {
+      const pattern = prompt('输入 Mock 匹配路径 (如 /api/v1/mock-test):', '/api/test');
+      if (!pattern) return;
+      mockRules.push({
+        id: Date.now(),
+        method: 'GET',
+        pattern,
+        status: 200,
+        body: JSON.stringify({ mocked: true, timestamp: Date.now() }, null, 2)
+      });
+      localStorage.setItem('wiretap_mock_rules', JSON.stringify(mockRules));
+      renderMockRules();
+      showToast('已添加 Mock 规则');
+    }
+
+    function deleteMockRule(id) {
+      mockRules = mockRules.filter(m => m.id !== id);
+      localStorage.setItem('wiretap_mock_rules', JSON.stringify(mockRules));
+      renderMockRules();
+      showToast('已删除 Mock 规则');
+    }
+
+    // --- Throttling Controls ---
+    function applyThrottlePreset(key, latency, loss) {
+      ['none', '4g', '3g', 'offline'].forEach(k => {
+        const el = document.getElementById(`preset-${k}`);
+        if (el) el.classList.toggle('active', k === key);
+      });
+      extraThrottleLatency = latency;
+      throttleLossRate = loss;
+      document.getElementById('slider-latency').value = latency;
+      document.getElementById('slider-latency-label').textContent = `${latency} ms`;
+      document.getElementById('slider-loss').value = loss;
+      document.getElementById('slider-loss-label').textContent = `${loss} %`;
+      document.getElementById('throttle-dot-badge').classList.toggle('hidden', key === 'none');
+      showToast(key === 'none' ? '已恢复直连无弱网状态' : `已激活网络仿真 (+${latency}ms)`);
+    }
+
+    function updateCustomThrottle() {
+      extraThrottleLatency = parseInt(document.getElementById('slider-latency').value, 10) || 0;
+      throttleLossRate = parseInt(document.getElementById('slider-loss').value, 10) || 0;
+      document.getElementById('slider-latency-label').textContent = `${extraThrottleLatency} ms`;
+      document.getElementById('slider-loss-label').textContent = `${throttleLossRate} %`;
+      document.getElementById('throttle-dot-badge').classList.toggle('hidden', extraThrottleLatency === 0 && throttleLossRate === 0);
+    }
+
+    // --- Developer Toolbox (Robust Real Logic) ---
+    function base64UrlDecode(str) {
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) { base64 += '='; }
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+
+    function runJwtDecode() {
+      const raw = document.getElementById('jwt-input').value.trim().replace(/^Bearer\s+/i, '');
+      const parts = raw.split('.');
+      if (parts.length < 2) {
+        document.getElementById('jwt-header-out').textContent = '// 请输入合法的 JWT 字符串 (Header.Payload.Signature)';
+        document.getElementById('jwt-payload-out').textContent = '// 无法解析 Payload';
+        return;
+      }
+      try {
+        const h = JSON.parse(base64UrlDecode(parts[0]));
+        const p = JSON.parse(base64UrlDecode(parts[1]));
+        document.getElementById('jwt-header-out').textContent = JSON.stringify(h, null, 2);
+        document.getElementById('jwt-payload-out').textContent = JSON.stringify(p, null, 2);
+      } catch (err) {
+        document.getElementById('jwt-header-out').textContent = '// 解码失败: ' + err.message;
+        document.getElementById('jwt-payload-out').textContent = '// 无效的 Base64 编码';
+      }
+    }
+
+    function runCodec(mode) {
+      const input = document.getElementById('codec-input').value;
+      const out = document.getElementById('codec-output');
+      try {
+        if (mode === 'b64e') {
+          const bytes = new TextEncoder().encode(input);
+          let bin = '';
+          bytes.forEach(b => { bin += String.fromCharCode(b); });
+          out.textContent = btoa(bin);
+        } else if (mode === 'b64d') {
+          const bin = atob(input.trim());
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          out.textContent = new TextDecoder().decode(bytes);
+        } else if (mode === 'urle') {
+          out.textContent = encodeURIComponent(input);
+        } else if (mode === 'urld') {
+          out.textContent = decodeURIComponent(input);
+        }
+      } catch (e) {
+        out.textContent = '// 处理失败: ' + e.message;
+      }
+    }
+
+    function setNowTimestamp() {
+      document.getElementById('ts-input').value = Math.floor(Date.now() / 1000);
+      runTimestampConvert();
+    }
+
+    function runTimestampConvert() {
+      const raw = document.getElementById('ts-input').value.trim();
+      const num = Number(raw);
+      const out = document.getElementById('ts-output');
+      if (!isNaN(num) && num > 0) {
+        const ms = num < 1e11 ? num * 1000 : num;
+        const d = new Date(ms);
+        out.textContent = `ISO:   ${d.toISOString()}\nLocal: ${d.toLocaleString()}\nUTC:   ${d.toUTCString()}`;
+      } else {
+        out.textContent = '// 请输入有效的数字时间戳';
+      }
+    }
+
+    function generateUuid() {
+      let uuid = '';
+      if (crypto.randomUUID) {
+        uuid = crypto.randomUUID();
+      } else {
+        uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+      }
+      document.getElementById('ts-output').textContent = `UUID v4: ${uuid}`;
+      copyTextToClipboard(uuid, null, 'UUID 已生成并复制');
+    }
+
+    // --- cURL Import & Execution ---
+    function openCurlModal() {
+      document.getElementById('curl-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('curl-modal-input').focus(), 50);
+    }
+
+    function closeCurlModal() {
+      document.getElementById('curl-modal').classList.add('hidden');
+    }
+
+    async function submitCurlImport() {
+      const raw = document.getElementById('curl-modal-input').value.trim();
+      if (!raw) return;
+
+      const urlMatch = raw.match(/https?:\/\/[^\s'"]+/);
+      if (!urlMatch) {
+        showToast('未检测到合法 URL 地址');
+        return;
+      }
+      const url = urlMatch[0];
+      const methodMatch = raw.match(/-X\s+([A-Za-z]+)/i);
+      const method = methodMatch ? methodMatch[1].toUpperCase() : 'POST';
+      const bodyMatch = raw.match(/-d\s+(['"])([\s\S]*?)\1/);
+      const body = bodyMatch ? bodyMatch[2] : '';
+
+      closeCurlModal();
+      showToast(`正在发送 cURL: ${method} ${url}...`);
+
+      const startTime = performance.now();
+      try {
+        const resp = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: (method !== 'GET' && method !== 'HEAD' && body) ? body : undefined
+        });
+        const duration = Math.round(performance.now() - startTime);
+        const text = await resp.text();
+
+        let respHeadersList = [];
+        resp.headers.forEach((value, key) => respHeadersList.push({ key, value }));
+
+        const pkt = {
+          id: 'curl-' + Date.now(),
+          method,
+          url,
+          path: new URL(url).pathname,
+          status: resp.status,
+          status_text: resp.statusText || 'OK',
+          latency: duration,
+          time: new Date().toLocaleTimeString(),
+          replayed: true,
+          reqHeaders: { 'Content-Type': 'application/json' },
+          reqHeadersList: [{ key: 'Content-Type', value: 'application/json' }],
+          reqBody: body,
+          respHeaders: Object.fromEntries(respHeadersList.map(h => [h.key, h.value])),
+          respHeadersList,
+          respBody: text
+        };
+
+        handleIncomingPacket(pkt);
+        selectedPacketId = pkt.id;
+        switchPage('traffic', 0);
+        renderPacketList();
+        renderInspector();
+        showToast(`cURL 请求完成 · ${resp.status}`);
+      } catch (err) {
+        showToast('请求失败: ' + err.message);
+      }
+    }
+
+    // --- HAR Export & Certificate Download ---
+    function exportHarFile() {
+      if (packets.length === 0) {
+        showToast('当前无可用流量');
+        return;
+      }
+      const har = {
+        log: {
+          version: '1.2',
+          creator: { name: 'WireTap', version: '1.0' },
+          entries: packets.map(p => ({
+            startedDateTime: new Date().toISOString(),
+            time: p.latency,
+            request: {
+              method: p.method,
+              url: p.url,
+              headers: Object.entries(p.reqHeaders).map(([name, value]) => ({ name, value })),
+              postData: p.reqBody ? { mimeType: 'application/json', text: p.reqBody } : undefined
+            },
+            response: {
+              status: p.status,
+              statusText: p.status_text,
+              headers: Object.entries(p.respHeaders).map(([name, value]) => ({ name, value })),
+              content: { mimeType: p.respContentType || 'application/json', text: p.respBody }
+            }
+          }))
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(har, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `wiretap-session-${Date.now()}.har`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('已导出 HAR 文件');
+    }
+
+    function downloadCaFile() {
+      // Direct download from backend
+      const a = document.createElement('a');
+      a.href = '/api/ca.crt';
+      a.download = 'wiretap-ca.crt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('正在下载 wiretap-ca.crt');
+    }
+
+    // --- Toast Notification ---
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function syncAllPills() {
+      const activeMethodBtn = document.querySelector('#method-track .segmented-btn.active');
+      if (activeMethodBtn) moveSegmentedPill('method-track', 'method-slider', activeMethodBtn);
+
+      const activeTabBtn = document.querySelector('#inspector-tab-track .segmented-btn.active');
+      if (activeTabBtn) moveSegmentedPill('inspector-tab-track', 'inspector-tab-slider', activeTabBtn);
+    }
+
+    // --- Keyboard Shortcuts ---
+    window.addEventListener('keydown', e => {
+      const tag = (e.target && e.target.tagName) || '';
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        switchPage('traffic', 0);
+        const s = document.getElementById('search-input');
+        s.focus();
+        s.select();
+      } else if (e.key === "/" && !inInput) {
+        e.preventDefault();
+        switchPage('traffic', 0);
+        document.getElementById('search-input').focus();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        const drawer = document.getElementById('replay-drawer');
+        if (drawer.classList.contains('open')) {
+          e.preventDefault();
+          executeInSituReplay();
+        }
+      } else if (e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        switchPage('tools', 4);
+      } else if (e.key === ' ' && !inInput) {
+        e.preventDefault();
+        toggleCapture();
+      } else if (e.key === 'Escape') {
+        closeCurlModal();
+        closeAddBpModal();
+      }
+    });
+
+    window.addEventListener('resize', syncAllPills);
+
+    window.onload = function () {
+      initBackendConnection();
+      renderBpRules();
+      renderMockRules();
+      requestAnimationFrame(syncAllPills);
+    };
+  </script>
+</body>
+</html>
