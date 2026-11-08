@@ -72,7 +72,38 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
-    let cli = Cli::parse();
+    // 智能参数预处理：支持开发者直觉敲法 `wiretap :8080 --to ...` 或 `wiretap 8080 ...`
+    let raw_args: Vec<String> = std::env::args().collect();
+    let mut normalized_args = Vec::new();
+    let mut i = 0;
+
+    while i < raw_args.len() {
+        if i == 0 {
+            normalized_args.push(raw_args[0].clone());
+            i += 1;
+            continue;
+        }
+
+        let arg = &raw_args[i];
+        let is_subcmd = matches!(arg.as_str(), "demo" | "proxy" | "mock" | "help" | "--help" | "-h" | "-V" | "--version");
+        let is_port_syntax = (arg.starts_with(':') && arg.len() > 1 && arg[1..].chars().all(|c| c.is_ascii_digit()))
+            || (!arg.starts_with('-') && !is_subcmd && !arg.is_empty() && arg.chars().all(|c| c.is_ascii_digit()));
+
+        if is_port_syntax && !is_subcmd {
+            normalized_args.push("--listen".to_string());
+            normalized_args.push(arg.trim_start_matches(':').to_string());
+        } else {
+            normalized_args.push(arg.clone());
+        }
+        i += 1;
+    }
+
+    let cli = match Cli::try_parse_from(&normalized_args) {
+        Ok(c) => c,
+        Err(err) => {
+            err.exit();
+        }
+    };
 
     match cli.command {
         Some(Commands::Demo { port }) => {
