@@ -1,0 +1,29 @@
+[package]
+name = "wiretap"
+version = "0.1.0"
+edition = "2021"
+authors = ["WireTap Contributors"]
+description = "A zero-dependency, single-binary API traffic inspector, debugger, and replay studio."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.4" }
+tower-http = { version = "0.5", features = ["cors"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+colored = "2.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
