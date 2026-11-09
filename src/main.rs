@@ -14,7 +14,7 @@ use wiretap::web::{create_web_router, WebState};
 #[command(
     name = "wiretap",
     author = "WireTap Maintainers",
-    version = "0.1.0",
+    version = "0.3.0",
     about = "Zero-dependency, single-binary API traffic inspector and replay studio",
     long_about = "WireTap intercepts, inspects, and replays HTTP API traffic in real-time with an embedded zero-config web studio. A local-first, privacy-respecting alternative to bloated SaaS tools."
 )]

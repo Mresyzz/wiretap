@@ -1,6 +1,6 @@
 [package]
 name = "wiretap"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["WireTap Maintainers"]
 description = "A zero-dependency, single-binary API traffic inspector, debugger, and replay studio."
