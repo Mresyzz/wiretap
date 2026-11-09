@@ -23,11 +23,13 @@ pub async fn run_demo(web_port: u16) {
         target_url: "http://demo.internal.api".to_string(),
         ui_port: web_port,
         max_history: 1000,
+        target_process: None,
     };
     let (_, ca_pem) = crate::proxy::build_ca();
     let web_state = WebState {
         store: store.clone(),
         target_base_url: std::sync::Arc::new(tokio::sync::RwLock::new(Some("http://demo.internal.api".to_string()))),
+        target_process: std::sync::Arc::new(tokio::sync::RwLock::new(None)),
         config: std::sync::Arc::new(tokio::sync::RwLock::new(cfg)),
         config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
         ca_cert_pem: std::sync::Arc::new(tokio::sync::RwLock::new(ca_pem)),
@@ -50,20 +52,20 @@ pub async fn run_demo(web_port: u16) {
 
     // 持续生成动态流量
     let mock_endpoints = vec![
-        ("GET", "/api/v1/users/profile", 200, "OK", r#"{"id":"usr_8921","name":"Alex Chen","role":"admin","teams":["core-infra","ai-sec"]}"#, 8),
-        ("POST", "/api/v1/orders/create", 201, "Created", r#"{"order_id":"ord_55214","status":"pending_payment","amount":189.50,"currency":"USD"}"#, 42),
-        ("GET", "/api/v1/metrics/prometheus", 200, "OK", "cpu_usage_ratio{zone=\"us-east\"} 0.28\nmemory_allocated_bytes 419430400", 3),
-        ("GET", "/api/v1/discounts/coupon-xyz", 404, "Not Found", r#"{"error":"Coupon expired or invalid","code":"ERR_COUPON_NOT_FOUND"}"#, 12),
-        ("POST", "/api/v1/payments/stripe-intent", 200, "OK", r#"{"client_secret":"pi_3MtwBwLkdIwHu7ix28a3tqPa_secret_yr89","status":"requires_action"}"#, 65),
-        ("DELETE", "/api/v1/cache/redis/keys", 204, "No Content", "", 5),
-        ("POST", "/api/v1/ai/completions", 500, "Internal Server Error", r#"{"error":"Upstream LLM provider timeout after 30000ms","status":500}"#, 850),
+        ("GET", "/api/v1/users/profile", 200, "OK", r#"{"id":"usr_8921","name":"Alex Chen","role":"admin","teams":["core-infra","ai-sec"]}"#, 8, "chrome.exe", 10248),
+        ("POST", "/api/v1/orders/create", 201, "Created", r#"{"order_id":"ord_55214","status":"pending_payment","amount":189.50,"currency":"USD"}"#, 42, "node.exe", 8452),
+        ("GET", "/api/v1/metrics/prometheus", 200, "OK", "cpu_usage_ratio{zone=\"us-east\"} 0.28\nmemory_allocated_bytes 419430400", 3, "python.exe", 14320),
+        ("GET", "/api/v1/discounts/coupon-xyz", 404, "Not Found", r#"{"error":"Coupon expired or invalid","code":"ERR_COUPON_NOT_FOUND"}"#, 12, "chrome.exe", 10248),
+        ("POST", "/api/v1/payments/stripe-intent", 200, "OK", r#"{"client_secret":"pi_3MtwBwLkdIwHu7ix28a3tqPa_secret_yr89","status":"requires_action"}"#, 65, "curl.exe", 6210),
+        ("DELETE", "/api/v1/cache/redis/keys", 204, "No Content", "", 5, "node.exe", 8452),
+        ("POST", "/api/v1/ai/completions", 500, "Internal Server Error", r#"{"error":"Upstream LLM provider timeout after 30000ms","status":500}"#, 850, "python.exe", 14320),
     ];
 
     let mut idx = 0;
     loop {
         sleep(Duration::from_millis(2200)).await;
 
-        let (method, path, status, status_text, body, duration) = mock_endpoints[idx % mock_endpoints.len()];
+        let (method, path, status, status_text, body, duration, proc_name, proc_pid) = mock_endpoints[idx % mock_endpoints.len()];
         idx += 1;
 
         let entry = TrafficEntry::new(
@@ -86,7 +88,7 @@ pub async fn run_demo(web_port: u16) {
             if body.is_empty() { None } else { Some(body.to_string()) },
             duration,
             false,
-        );
+        ).with_process(Some(proc_name.to_string()), Some(proc_pid));
 
         store.add(entry).await;
         let status_colored = if status >= 200 && status < 300 {
@@ -121,7 +123,7 @@ async fn seed_initial_traffic(store: &TrafficStore) {
             Some(r#"{"token":"jwt.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","expires_in":86400,"user":{"id":"usr_01","email":"developer@company.com"}}"#.to_string()),
             38,
             false,
-        ),
+        ).with_process(Some("chrome.exe".to_string()), Some(10248)),
         TrafficEntry::new(
             "GET".to_string(),
             "/api/v1/dashboard/overview".to_string(),
@@ -140,7 +142,7 @@ async fn seed_initial_traffic(store: &TrafficStore) {
             Some(r#"{"daily_active_users":14250,"total_revenue":89200.00,"server_health":"healthy"}"#.to_string()),
             14,
             false,
-        ),
+        ).with_process(Some("node.exe".to_string()), Some(8452)),
     ];
 
     for s in seeds {

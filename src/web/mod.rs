@@ -29,6 +29,7 @@ pub struct Assets;
 pub struct WebState {
     pub store: TrafficStore,
     pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
+    pub target_process: Arc<tokio::sync::RwLock<Option<String>>>,
     pub config: Arc<tokio::sync::RwLock<WireTapConfig>>,
     pub config_path: String,
     pub ca_cert_pem: Arc<tokio::sync::RwLock<String>>,
@@ -41,9 +42,11 @@ impl WebState {
             ..Default::default()
         };
         let (_, cert_pem) = crate::proxy::build_ca();
+        let target_proc = cfg.target_process.clone();
         Self {
             store,
             target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
+            target_process: Arc::new(tokio::sync::RwLock::new(target_proc)),
             config: Arc::new(tokio::sync::RwLock::new(cfg)),
             config_path: crate::config::DEFAULT_CONFIG_FILE.to_string(),
             ca_cert_pem: Arc::new(tokio::sync::RwLock::new(cert_pem)),
@@ -63,6 +66,8 @@ pub fn create_web_router(state: WebState) -> Router {
         .route("/api/ca.crt", get(ca_cert_handler))
         .route("/api/status", get(status_handler))
         .route("/api/config", get(get_config_handler).post(update_config_handler))
+        .route("/api/processes", get(list_processes_handler))
+        .route("/api/target-process", get(get_target_process_handler).post(set_target_process_handler))
         .route("/api/scan-ports", get(scan_ports_handler))
         .route("/static/*file", get(static_handler))
         .with_state(Arc::new(state))
@@ -187,10 +192,12 @@ async fn ca_cert_handler(State(state): State<Arc<WebState>>) -> impl IntoRespons
 
 async fn status_handler(State(state): State<Arc<WebState>>) -> Json<serde_json::Value> {
     let target = state.target_base_url.read().await.clone();
+    let target_proc = state.target_process.read().await.clone();
     let cfg = state.config.read().await.clone();
     Json(serde_json::json!({
         "status": "running",
         "target": target,
+        "target_process": target_proc,
         "listen_port": cfg.listen_port,
         "ui_port": cfg.ui_port,
         "max_history": cfg.max_history,
@@ -209,6 +216,7 @@ pub struct UpdateConfigPayload {
     pub listen_port: Option<u16>,
     pub ui_port: Option<u16>,
     pub max_history: Option<usize>,
+    pub target_process: Option<String>,
 }
 
 async fn update_config_handler(
@@ -237,6 +245,16 @@ async fn update_config_handler(
     if let Some(max_history) = payload.max_history {
         cfg.max_history = max_history;
     }
+    if let Some(target_proc) = payload.target_process {
+        let trimmed = target_proc.trim();
+        let val = if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("ALL") {
+            None
+        } else {
+            Some(trimmed.to_string())
+        };
+        *state.target_process.write().await = val.clone();
+        cfg.target_process = val;
+    }
 
     if let Err(e) = cfg.save_to_file(&state.config_path) {
         eprintln!("Warning: failed to auto-save config file: {}", e);
@@ -247,6 +265,43 @@ async fn update_config_handler(
         "message": "配置已自动保存并实时生效",
         "config": *cfg
     })))
+}
+
+async fn list_processes_handler() -> Json<Vec<crate::process::ProcessInfo>> {
+    let processes = tokio::task::spawn_blocking(crate::process::list_active_network_processes)
+        .await
+        .unwrap_or_default();
+    Json(processes)
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct TargetProcessPayload {
+    pub process: Option<String>,
+}
+
+async fn get_target_process_handler(State(state): State<Arc<WebState>>) -> Json<TargetProcessPayload> {
+    let proc = state.target_process.read().await.clone();
+    Json(TargetProcessPayload { process: proc })
+}
+
+async fn set_target_process_handler(
+    State(state): State<Arc<WebState>>,
+    Json(payload): Json<TargetProcessPayload>,
+) -> Json<serde_json::Value> {
+    let target = match payload.process.as_deref().map(str::trim) {
+        None | Some("") | Some("ALL") => None,
+        Some(name) => Some(name.to_string()),
+    };
+    *state.target_process.write().await = target.clone();
+
+    let mut cfg = state.config.write().await;
+    cfg.target_process = target.clone();
+    let _ = cfg.save_to_file(&state.config_path);
+
+    Json(serde_json::json!({
+        "status": "ok",
+        "target_process": target
+    }))
 }
 
 async fn scan_ports_handler(

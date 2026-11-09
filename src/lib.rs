@@ -1,6 +1,7 @@
 pub mod config;
 pub mod demo;
 pub mod model;
+pub mod process;
 pub mod proxy;
 pub mod replay;
 pub mod scanner;

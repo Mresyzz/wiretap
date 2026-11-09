@@ -41,6 +41,10 @@ struct Cli {
     /// Automatically configure OS system proxy on launch and restore on exit
     #[arg(short = 's', long)]
     sys: bool,
+
+    /// Filter traffic by process name or PID (e.g. chrome.exe, node.exe)
+    #[arg(short = 'p', long)]
+    process: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -68,6 +72,10 @@ enum Commands {
         /// Automatically configure OS system proxy on launch and restore on exit
         #[arg(short = 's', long)]
         sys: bool,
+
+        /// Filter traffic by process name or PID (e.g. chrome.exe, node.exe)
+        #[arg(short = 'p', long)]
+        process: Option<String>,
     },
     /// Run as a standalone mock/sink server to inspect webhooks or incoming requests
     Mock {
@@ -124,8 +132,9 @@ async fn main() {
         Some(Commands::Demo { port }) => {
             demo::run_demo(port).await;
         }
-        Some(Commands::Proxy { listen, target, ui_port, sys }) => {
-            start_proxy(listen, target, ui_port, cli.max_history, sys).await;
+        Some(Commands::Proxy { listen, target, ui_port, sys, process }) => {
+            let proc_filter = process.or(cli.process);
+            start_proxy(listen, target, ui_port, cli.max_history, sys, proc_filter).await;
         }
         Some(Commands::Mock { listen, ui_port }) => {
             start_mock(listen, ui_port, cli.max_history).await;
@@ -133,15 +142,17 @@ async fn main() {
         None => {
             let saved_config = WireTapConfig::load_or_default(DEFAULT_CONFIG_FILE);
             if let Some(target) = cli.to {
-                start_proxy(cli.listen, target, cli.ui_port, cli.max_history, cli.sys).await;
+                start_proxy(cli.listen, target, cli.ui_port, cli.max_history, cli.sys, cli.process).await;
             } else if std::path::Path::new(DEFAULT_CONFIG_FILE).exists() {
                 println!("Loaded configuration from {}", DEFAULT_CONFIG_FILE);
+                let proc_filter = cli.process.or(saved_config.target_process.clone());
                 start_proxy(
                     saved_config.listen_port.to_string(),
                     saved_config.target_url,
                     saved_config.ui_port,
                     saved_config.max_history,
                     cli.sys,
+                    proc_filter,
                 ).await;
             } else {
                 println!("No upstream target specified. Starting in demo mode (use --to <URL> to proxy).\n");
@@ -180,7 +191,14 @@ fn spawn_web_studio(web_state: WebState, ui_port: u16) {
     });
 }
 
-async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_history: usize, sys: bool) {
+async fn start_proxy(
+    listen_str: String,
+    target_str: String,
+    ui_port: u16,
+    max_history: usize,
+    sys: bool,
+    process_filter: Option<String>,
+) {
     let proxy_port = parse_port(&listen_str);
     let target_base_url = normalize_target(&target_str);
     let store = TrafficStore::new(max_history);
@@ -190,9 +208,12 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
     config.target_url = target_base_url.clone();
     config.ui_port = ui_port;
     config.max_history = max_history;
+    let target_process = process_filter.or_else(|| config.target_process.clone());
+    config.target_process = target_process.clone();
     let _ = config.save_to_file(DEFAULT_CONFIG_FILE);
 
     let shared_target = Arc::new(RwLock::new(Some(target_base_url.clone())));
+    let shared_process = Arc::new(RwLock::new(target_process.clone()));
     let shared_config = Arc::new(RwLock::new(config));
 
     let (ca_authority, ca_cert_pem) = build_ca();
@@ -201,6 +222,11 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
     println!("\nWireTap v{} -- Local API Traffic Inspector & Replay Studio", env!("CARGO_PKG_VERSION"));
     println!("  Proxy listen:      http://127.0.0.1:{}", proxy_port);
     println!("  Forwarding target: {}", target_base_url);
+    if let Some(ref p) = target_process {
+        println!("  Process filter:    {}", p);
+    } else {
+        println!("  Process filter:    All processes");
+    }
     println!("  Web Studio UI:     http://127.0.0.1:{}", ui_port);
 
     if sys {
@@ -220,13 +246,14 @@ async fn start_proxy(listen_str: String, target_str: String, ui_port: u16, max_h
     spawn_web_studio(WebState {
         store: store.clone(),
         target_base_url: shared_target.clone(),
+        target_process: shared_process.clone(),
         config: shared_config.clone(),
         config_path: DEFAULT_CONFIG_FILE.to_string(),
         ca_cert_pem: shared_ca_cert,
     }, ui_port);
 
     println!("  Status:            Running (Press Ctrl+C to stop)\n");
-    if let Err(e) = start_hudsucker_proxy(proxy_port, shared_target, store, ca_authority).await {
+    if let Err(e) = start_hudsucker_proxy(proxy_port, shared_target, shared_process, store, ca_authority).await {
         eprintln!("Proxy server encountered error: {}", e);
     }
 }
@@ -242,6 +269,7 @@ async fn start_mock(listen_str: String, ui_port: u16, max_history: usize) {
     let _ = config.save_to_file(DEFAULT_CONFIG_FILE);
 
     let shared_target = Arc::new(RwLock::new(None));
+    let shared_process = Arc::new(RwLock::new(None));
     let shared_config = Arc::new(RwLock::new(config));
 
     println!("\nWireTap v{} -- Mock & Webhook Sink Mode", env!("CARGO_PKG_VERSION"));
@@ -254,6 +282,7 @@ async fn start_mock(listen_str: String, ui_port: u16, max_history: usize) {
     spawn_web_studio(WebState {
         store: store.clone(),
         target_base_url: shared_target,
+        target_process: shared_process,
         config: shared_config,
         config_path: DEFAULT_CONFIG_FILE.to_string(),
         ca_cert_pem: Arc::new(RwLock::new(ca_cert_pem)),

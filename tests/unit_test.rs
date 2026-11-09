@@ -619,17 +619,20 @@ mod tests {
         
         let store = TrafficStore::new(10);
         let target_holder = std::sync::Arc::new(tokio::sync::RwLock::new(Some("http://initial-host:3000".to_string())));
+        let process_holder = std::sync::Arc::new(tokio::sync::RwLock::new(None));
         let cfg = WireTapConfig {
             listen_port: 8080,
             target_url: "http://initial-host:3000".to_string(),
             ui_port: 9090,
             max_history: 1000,
+            target_process: None,
         };
         let cfg_holder = std::sync::Arc::new(tokio::sync::RwLock::new(cfg));
 
         let state = WebState {
             store,
             target_base_url: target_holder.clone(),
+            target_process: process_holder.clone(),
             config: cfg_holder.clone(),
             config_path: test_config_path.to_string_lossy().to_string(),
             ca_cert_pem: std::sync::Arc::new(tokio::sync::RwLock::new("test-ca-pem".to_string())),
@@ -660,6 +663,7 @@ mod tests {
             target_url: "http://updated-upstream:5000".to_string(),
             ui_port: 9091,
             max_history: 2000,
+            target_process: Some("chrome.exe".to_string()),
         };
         let post_body = serde_json::to_string(&new_cfg).unwrap();
         let resp = app
@@ -712,6 +716,122 @@ mod tests {
         let results = scan_ports_list(vec![open_port, closed_port], 10).await;
         assert!(results.iter().any(|p| p.port == open_port), "Open port must be in results");
         assert!(!results.iter().any(|p| p.port == closed_port), "Closed port must not be in results");
+    }
+
+    #[tokio::test]
+    async fn test_process_inspection_and_model() {
+        let entry = TrafficEntry::new(
+            "GET".to_string(),
+            "/api/test".to_string(),
+            None,
+            "http://127.0.0.1:8080/api/test".to_string(),
+            vec![],
+            None,
+            200,
+            "OK".to_string(),
+            vec![],
+            None,
+            10,
+            false,
+        ).with_process(Some("chrome.exe".to_string()), Some(1234));
+
+        assert_eq!(entry.process_name.as_deref(), Some("chrome.exe"));
+        assert_eq!(entry.process_pid, Some(1234));
+
+        // Test process module exports
+        let active_procs = wiretap::process::list_active_network_processes();
+        // Should return a valid list (might be non-empty on Windows)
+        println!("Detected active processes count: {}", active_procs.len());
+    }
+
+    #[tokio::test]
+    async fn test_target_process_web_api() {
+        use tower::ServiceExt;
+        use http_body_util::BodyExt;
+        use axum::http::{Request, StatusCode};
+        use wiretap::config::WireTapConfig;
+        use wiretap::web::{create_web_router, WebState};
+
+        let store = TrafficStore::new(10);
+        let target_holder = std::sync::Arc::new(tokio::sync::RwLock::new(None));
+        let process_holder = std::sync::Arc::new(tokio::sync::RwLock::new(None));
+        let cfg = WireTapConfig::default();
+        let cfg_holder = std::sync::Arc::new(tokio::sync::RwLock::new(cfg));
+
+        let state = WebState {
+            store,
+            target_base_url: target_holder,
+            target_process: process_holder.clone(),
+            config: cfg_holder,
+            config_path: "test_process_api.json".to_string(),
+            ca_cert_pem: std::sync::Arc::new(tokio::sync::RwLock::new(String::new())),
+        };
+        let app = create_web_router(state);
+
+        // 1. GET /api/processes
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/processes")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // 2. GET /api/target-process (initially None)
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/target-process")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let payload: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert!(payload["process"].is_null());
+
+        // 3. POST /api/target-process -> Set to "chrome.exe"
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/target-process")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(r#"{"process":"chrome.exe"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(process_holder.read().await.as_deref(), Some("chrome.exe"));
+
+        // 4. POST /api/target-process -> Set to "ALL" (clear filter)
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/target-process")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(r#"{"process":"ALL"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(*process_holder.read().await, None);
+
+        let _ = std::fs::remove_file("test_process_api.json");
     }
 }
 

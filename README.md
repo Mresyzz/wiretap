@@ -9,9 +9,9 @@
 </p>
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![Binary Size](https://img.shields.io/badge/binary_size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap/releases)
+[![Binary Size](https://img.shields.io/badge/size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blueviolet.svg)](#installation)
-[![Tests](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
+[![Tests](https://img.shields.io/badge/tests-20%2F20%20passed-success.svg)](tests/unit_test.rs)
 
 WireTap integrates a transparent proxy engine with an embedded real-time web workbench, allowing developers to capture, inspect, filter, modify, and replay local or microservice API traffic without external dependencies, Node.js runtimes, or cloud accounts.
 
@@ -42,6 +42,7 @@ WireTap integrates a transparent proxy engine with an embedded real-time web wor
 ## Core Capabilities
 
 - **Single Static Binary**: Built with pure Rust (Tokio, Axum, Hudsucker). No Docker, Python, or Node.js required. Starts in under 5 ms with less than 10 MB idle RAM.
+- **Process-Specific Capture & Filtering**: Pinpoint and intercept traffic for specific target applications (e.g. `chrome.exe`, `node.exe`, `python.exe`) or specific PIDs. Eliminate background OS network noise with zero overhead.
 - **Local-First & Zero Telemetry**: Captured headers and payloads remain strictly in local memory. Zero cloud telemetry, mandatory logins, or tracking.
 - **In-Situ Replay & Diff**: Edit method, headers, or body directly in the inspector drawer, re-execute the request instantly, and review side-by-side Response Diffs.
 - **Credential Masking**: Automatically detects and redacts `Authorization: Bearer`, `Cookie`, and tokens with one click before sharing captures.
@@ -67,13 +68,19 @@ Forward traffic from `:8080` to an upstream backend on `:3000`:
 wiretap :8080 --to http://localhost:3000
 ```
 
-### 3. System Proxy Mode
-Automatically route all system HTTP/HTTPS requests through WireTap (automatically restored on exit):
+### 3. Process-Filtered Capture Mode
+Capture only traffic originating from Chrome, Node, or Python:
+```bash
+wiretap :8080 --to http://localhost:3000 -p chrome.exe
+```
+
+### 4. System Proxy Mode
+Automatically route system HTTP/HTTPS requests through WireTap (automatically restored on exit):
 ```bash
 wiretap :8080 --to http://localhost:3000 --sys
 ```
 
-### 4. Webhook / Mock Sink Mode
+### 5. Webhook / Mock Sink Mode
 Capture third-party callbacks or webhooks without running an upstream server:
 ```bash
 wiretap mock :8080
@@ -84,20 +91,27 @@ All incoming requests return `200 OK` and are recorded for real-time inspection.
 
 ## Installation
 
-### 1. Pre-built Binaries
-Download the standalone binary for your platform from [GitHub Releases](https://github.com/Mresyzz/wiretap/releases):
-- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
-- **Linux (x86_64)**: `wiretap-linux-x86_64`
-- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
-- **macOS (Intel)**: `wiretap-darwin-x86_64`
-
-### 2. Via Cargo
+### 1. Via Cargo (Recommended)
+Install directly using Rust's official package manager:
 ```bash
 cargo install --git https://github.com/Mresyzz/wiretap.git
 ```
 
-### 3. Build from Source
+### 2. Build from Source
 Requirements: [Rust](https://www.rust-lang.org/) 1.75+
+```bash
+git clone https://github.com/Mresyzz/wiretap.git
+cd wiretap
+cargo build --release
+```
+The compiled single standalone binary will be available at `./target/release/wiretap` (or `wiretap.exe` on Windows).
+
+### 3. Pre-built Binaries
+Standalone binaries for major platforms can also be downloaded from [GitHub Releases](https://github.com/Mresyzz/wiretap/releases):
+- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
+- **Linux (x86_64)**: `wiretap-linux-x86_64`
+- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
+- **macOS (Intel)**: `wiretap-darwin-x86_64`
 
 ```bash
 git clone https://github.com/Mresyzz/wiretap.git

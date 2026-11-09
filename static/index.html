@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0A0A'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' dominant-baseline='central' font-family='-apple-system,BlinkMacSystemFont,Inter,sans-serif' font-weight='900' font-size='20' fill='%23FFFFFF'%3EW%3C/text%3E%3C/svg%3E">
   <title>WireTap | 极简 API 流量工作台</title>
   <style>
     :root {
@@ -618,6 +618,46 @@
       gap: 8px;
     }
 
+    .proc-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      max-width: 95px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .packet-card.active .proc-badge {
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--text-primary);
+      border-color: rgba(0, 0, 0, 0.16);
+    }
+
+    .proc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-primary);
+      transition: background-color 0.12s ease;
+    }
+    .proc-item:hover {
+      background-color: var(--bg-hover);
+    }
+    .proc-item.selected {
+      background-color: var(--bg-tertiary);
+      font-weight: 600;
+    }
+
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -998,8 +1038,8 @@
     <!-- Top System Header -->
     <header class="top-header">
       <div class="brand-group">
-        <div class="brand-logo" style="width:28px;height:28px;background:var(--accent-black);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.18);">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <div class="brand-logo" style="width:28px;height:28px;background:#0A0A0A;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.18);font-family:var(--font-sans);font-weight:900;font-size:16px;color:#FFFFFF;letter-spacing:-0.05em;line-height:1;user-select:none;">
+          W
         </div>
         <span class="brand-title">WIRETAP</span>
       </div>
@@ -1009,6 +1049,48 @@
         <div class="proxy-pill mono" id="conn-pill" title="后端服务通信状态">
           <span id="proxy-dot" class="status-dot pulsing connected"></span>
           <span id="proxy-addr">127.0.0.1:8080</span>
+        </div>
+
+        <!-- Target Process Selector Pill -->
+        <div class="process-filter-box" style="position:relative;">
+          <button id="proc-dropdown-btn" onclick="toggleProcessDropdown(event)" class="btn btn-pill tactile" style="gap:6px;font-size:12px;padding:5px 12px;border:1px solid var(--border-color);background:var(--bg-secondary);" aria-label="按进程过滤抓包" title="按指定进程抓包与过滤">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <line x1="9" y1="1" x2="9" y2="4"></line>
+              <line x1="15" y1="1" x2="15" y2="4"></line>
+              <line x1="9" y1="20" x2="9" y2="23"></line>
+              <line x1="15" y1="20" x2="15" y2="23"></line>
+              <line x1="20" y1="9" x2="23" y2="9"></line>
+              <line x1="20" y1="14" x2="23" y2="14"></line>
+              <line x1="1" y1="9" x2="4" y2="9"></line>
+              <line x1="1" y1="14" x2="4" y2="14"></line>
+            </svg>
+            <span id="proc-active-name" class="mono" style="font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">全部进程</span>
+            <span id="proc-clear-btn" onclick="clearTargetProcess(event)" class="hidden" style="cursor:pointer;padding:0 2px;opacity:0.6;font-size:14px;line-height:1;margin-left:2px;" title="恢复抓取全部进程">&times;</span>
+            <svg id="proc-dropdown-arrow" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+
+          <div id="proc-dropdown-menu" class="hidden" style="position:absolute;top:calc(100% + 6px);right:0;width:300px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,0.15);z-index:999;padding:8px 0;display:flex;flex-direction:column;">
+            <div style="padding:6px 12px 8px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">选择目标审查进程</span>
+                <span id="proc-count-tag" class="count-pill mono" style="font-size:10px;padding:1px 5px;">0</span>
+              </div>
+              <button type="button" onclick="refreshProcessList(event)" class="btn btn-sm tactile" style="padding:3px 7px;font-size:11px;gap:4px;" title="刷新系统网络进程">
+                <svg id="proc-refresh-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <span>刷新</span>
+              </button>
+            </div>
+
+            <div style="padding:8px 10px 4px;">
+              <input type="text" id="proc-search-box" oninput="filterProcessDropdownItems()" onkeydown="handleProcSearchKey(event)" placeholder="过滤进程名 (如 chrome) 或直接回车确认..." style="width:100%;height:30px;padding:4px 8px;border-radius:6px;font-size:11.5px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);" />
+            </div>
+
+            <div id="proc-list-items" style="max-height:260px;overflow-y:auto;padding:4px 0;">
+              <!-- 动态进程项 -->
+            </div>
+          </div>
         </div>
 
         <div class="divider-v"></div>
@@ -1120,6 +1202,7 @@
           <div class="inspector-top-bar">
             <div class="url-summary">
               <span id="insp-method" class="method-badge solid-dark mono">GET</span>
+              <span id="insp-proc" class="proc-badge mono hidden" style="font-size:11px;padding:2px 7px;">-</span>
               <span id="insp-url" class="inspector-url mono selectable">-</span>
             </div>
 
@@ -1629,7 +1712,9 @@
         respHeaders: respHeadersDict,
         respHeadersList,
         respBody: raw.response_body ?? raw.respBody ?? '',
-        respContentType: raw.response_content_type || respHeadersDict['content-type'] || ''
+        respContentType: raw.response_content_type || respHeadersDict['content-type'] || '',
+        processName: raw.process_name || null,
+        processPid: raw.process_pid || null
       };
     }
 
@@ -1795,7 +1880,7 @@
       const filtered = packets.filter(p => {
         if (currentMethodFilter !== 'ALL' && p.method !== currentMethodFilter) return false;
         if (!query) return true;
-        const hay = `${p.method} ${p.url} ${p.path} ${p.status}`;
+        const hay = `${p.method} ${p.url} ${p.path} ${p.status} ${p.processName || ''} ${p.processPid || ''}`;
         if (searchRegexMode) {
           try {
             return new RegExp(query, 'i').test(hay);
@@ -1829,6 +1914,7 @@
             <!-- tabIndex = 0 a11y keyboard focus enabled -->
             <div class="packet-row-top">
               <span class="method-badge mono ${isDarkMethod ? 'solid-dark' : ''}">${p.method}</span>
+              ${p.processName ? `<span class="proc-badge mono" title="来源进程: ${escapeHtml(p.processName)}${p.processPid ? ' (PID: ' + p.processPid + ')' : ''}">${escapeHtml(p.processName)}</span>` : ''}
               <span class="packet-path mono" title="${escapeHtml(p.path)}">${escapeHtml(p.path)}</span>
               ${p.replayed ? '<span class="replay-tag mono">REPLAY</span>' : ''}
             </div>
@@ -1859,8 +1945,10 @@
 
     function renderInspector() {
       const p = getSelectedPacket();
+      const procEl = document.getElementById('insp-proc');
       if (!p) {
         document.getElementById('insp-method').textContent = '-';
+        if (procEl) procEl.classList.add('hidden');
         document.getElementById('insp-url').textContent = '未选择流量';
         document.getElementById('insp-status').textContent = '-';
         document.getElementById('insp-latency').textContent = '-';
@@ -1872,6 +1960,15 @@
       }
 
       document.getElementById('insp-method').textContent = p.method;
+      if (procEl) {
+        if (p.processName) {
+          procEl.textContent = p.processPid ? `${p.processName} (${p.processPid})` : p.processName;
+          procEl.classList.remove('hidden');
+          procEl.title = `来源进程: ${p.processName} (PID: ${p.processPid || 'N/A'})`;
+        } else {
+          procEl.classList.add('hidden');
+        }
+      }
       document.getElementById('insp-url').textContent = p.url;
       document.getElementById('insp-url').title = p.url;
 
@@ -2795,8 +2892,194 @@
       }
     }
 
+    // --- Target Process Filter Management ---
+    let cachedProcessList = [];
+    let currentTargetProcess = null;
+
+    async function initTargetProcess() {
+      try {
+        const res = await fetch('/api/target-process');
+        if (res.ok) {
+          const data = await res.json();
+          currentTargetProcess = data.process || null;
+          updateProcessButtonUi(currentTargetProcess);
+        }
+      } catch (e) {}
+    }
+
+    function updateProcessButtonUi(proc) {
+      const nameEl = document.getElementById('proc-active-name');
+      const clearBtn = document.getElementById('proc-clear-btn');
+      const dropdownBtn = document.getElementById('proc-dropdown-btn');
+
+      if (!proc || proc === 'ALL') {
+        nameEl.textContent = '全部进程';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        if (dropdownBtn) {
+          dropdownBtn.style.background = 'var(--bg-secondary)';
+          dropdownBtn.style.borderColor = 'var(--border-color)';
+        }
+      } else {
+        nameEl.textContent = proc;
+        if (clearBtn) clearBtn.classList.remove('hidden');
+        if (dropdownBtn) {
+          dropdownBtn.style.background = 'var(--bg-tertiary)';
+          dropdownBtn.style.borderColor = 'var(--accent-black)';
+        }
+      }
+    }
+
+    function toggleProcessDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('proc-dropdown-menu');
+      if (!menu) return;
+      const isHidden = menu.classList.contains('hidden');
+      if (isHidden) {
+        menu.classList.remove('hidden');
+        refreshProcessList();
+        const searchInput = document.getElementById('proc-search-box');
+        if (searchInput) {
+          searchInput.value = '';
+          setTimeout(() => searchInput.focus(), 50);
+        }
+      } else {
+        menu.classList.add('hidden');
+      }
+    }
+
+    async function refreshProcessList(e) {
+      if (e) e.stopPropagation();
+      const icon = document.getElementById('proc-refresh-icon');
+      if (icon) icon.style.animation = 'spin 0.8s linear infinite';
+      const container = document.getElementById('proc-list-items');
+      const countTag = document.getElementById('proc-count-tag');
+
+      try {
+        const [procsRes, targetRes] = await Promise.all([
+          fetch('/api/processes'),
+          fetch('/api/target-process')
+        ]);
+
+        if (procsRes.ok) {
+          cachedProcessList = await procsRes.json();
+        }
+        if (targetRes.ok) {
+          const tData = await targetRes.json();
+          currentTargetProcess = tData.process || null;
+          updateProcessButtonUi(currentTargetProcess);
+        }
+
+        if (countTag) countTag.textContent = cachedProcessList.length;
+        renderProcessDropdownItems(cachedProcessList);
+      } catch (err) {
+        if (container) {
+          container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">加载进程失败</div>';
+        }
+      } finally {
+        if (icon) icon.style.animation = '';
+      }
+    }
+
+    function renderProcessDropdownItems(list) {
+      const container = document.getElementById('proc-list-items');
+      if (!container) return;
+
+      const isAllSelected = !currentTargetProcess || currentTargetProcess === 'ALL';
+      let html = `
+        <div class="proc-item ${isAllSelected ? 'selected' : ''}" onclick="selectTargetProcess(null)">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span style="font-weight:600;">全部进程 (All Processes)</span>
+          </div>
+          ${isAllSelected ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+        </div>
+        <div style="height:1px;background:var(--border-color);margin:4px 0;"></div>
+      `;
+
+      if (!list || list.length === 0) {
+        html += '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:11.5px;">未探测到活动网络进程，可在上方直接输入指定进程名</div>';
+      } else {
+        html += list.map(p => {
+          const isSelected = currentTargetProcess && (
+            currentTargetProcess.toLowerCase() === p.name.toLowerCase() ||
+            currentTargetProcess === String(p.pid)
+          );
+          return `
+            <div class="proc-item ${isSelected ? 'selected' : ''}" onclick="selectTargetProcess('${escapeHtml(p.name)}')">
+              <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                <span class="mono" style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name)}</span>
+                <span class="mono" style="font-size:10.5px;color:var(--text-tertiary);">PID: ${p.pid}</span>
+              </div>
+              ${isSelected ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      container.innerHTML = html;
+    }
+
+    function filterProcessDropdownItems() {
+      const q = (document.getElementById('proc-search-box').value || '').trim().toLowerCase();
+      if (!q) {
+        renderProcessDropdownItems(cachedProcessList);
+        return;
+      }
+      const filtered = cachedProcessList.filter(p => 
+        p.name.toLowerCase().includes(q) || String(p.pid).includes(q)
+      );
+      renderProcessDropdownItems(filtered);
+    }
+
+    function handleProcSearchKey(e) {
+      if (e.key === 'Enter') {
+        const val = (e.target.value || '').trim();
+        if (val) {
+          selectTargetProcess(val);
+        }
+      }
+    }
+
+    async function selectTargetProcess(procName) {
+      const target = (procName && procName !== 'ALL') ? procName : null;
+      try {
+        const res = await fetch('/api/target-process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ process: target })
+        });
+        if (res.ok) {
+          currentTargetProcess = target;
+          updateProcessButtonUi(target);
+          showToast(target ? `已锁定审查进程: ${target}` : '已恢复捕获全部进程');
+        }
+      } catch (err) {
+        showToast('切换目标进程失败: ' + err.message);
+      } finally {
+        const menu = document.getElementById('proc-dropdown-menu');
+        if (menu) menu.classList.add('hidden');
+      }
+    }
+
+    function clearTargetProcess(e) {
+      if (e) e.stopPropagation();
+      selectTargetProcess(null);
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('proc-dropdown-menu');
+      const btn = document.getElementById('proc-dropdown-btn');
+      if (menu && !menu.classList.contains('hidden')) {
+        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          menu.classList.add('hidden');
+        }
+      }
+    });
+
     window.onload = function () {
       initBackendConnection();
+      initTargetProcess();
       loadSettingsConfig();
       requestAnimationFrame(syncAllPills);
     };

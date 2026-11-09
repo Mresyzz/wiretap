@@ -21,6 +21,7 @@ pub const MAX_RECORD_BODY_SIZE: usize = 10 * 1024 * 1024;
 #[derive(Clone)]
 pub struct WireTapProxyHandler {
     pub target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
+    pub target_process: Arc<tokio::sync::RwLock<Option<String>>>,
     pub store: TrafficStore,
     pending: Arc<tokio::sync::Mutex<VecDeque<PendingRequest>>>,
 }
@@ -34,20 +35,29 @@ struct PendingRequest {
     full_url: String,
     request_headers: Vec<KeyValue>,
     request_body: Option<String>,
+    process_name: Option<String>,
+    process_pid: Option<u32>,
+    should_record: bool,
 }
 
 impl WireTapProxyHandler {
     pub fn new(store: TrafficStore, target_base_url: Option<String>) -> Self {
         Self {
             target_base_url: Arc::new(tokio::sync::RwLock::new(target_base_url)),
+            target_process: Arc::new(tokio::sync::RwLock::new(None)),
             store,
             pending: Arc::new(tokio::sync::Mutex::new(VecDeque::new())),
         }
     }
 
-    pub fn new_shared(store: TrafficStore, target_base_url: Arc<tokio::sync::RwLock<Option<String>>>) -> Self {
+    pub fn new_shared(
+        store: TrafficStore,
+        target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
+        target_process: Arc<tokio::sync::RwLock<Option<String>>>,
+    ) -> Self {
         Self {
             target_base_url,
+            target_process,
             store,
             pending: Arc::new(tokio::sync::Mutex::new(VecDeque::new())),
         }
@@ -55,13 +65,41 @@ impl WireTapProxyHandler {
 
     pub async fn process_request(
         &mut self,
+        req: HyperRequest<Body>,
+    ) -> RequestOrResponse {
+        self.process_request_with_port(req, None).await
+    }
+
+    pub async fn process_request_with_port(
+        &mut self,
         mut req: HyperRequest<Body>,
+        client_port: Option<u16>,
     ) -> RequestOrResponse {
         let start_time = Instant::now();
         let method = req.method().to_string();
         let original_uri = req.uri().clone();
         let path = original_uri.path().to_string();
         let query = original_uri.query().map(|q| q.to_string());
+
+        let proc_info = client_port.and_then(crate::process::get_process_by_port);
+        let (proc_name, proc_pid) = match &proc_info {
+            Some(p) => (Some(p.name.clone()), Some(p.pid)),
+            None => (None, None),
+        };
+
+        let filter_guard = self.target_process.read().await;
+        let should_record = match filter_guard.as_deref() {
+            None => true,
+            Some(f) if f.is_empty() || f.eq_ignore_ascii_case("ALL") => true,
+            Some(f) => {
+                if let Some(ref p) = proc_info {
+                    p.name.to_lowercase().contains(&f.to_lowercase()) || p.pid.to_string() == f
+                } else {
+                    false
+                }
+            }
+        };
+        drop(filter_guard);
 
         let target_opt = self.target_base_url.read().await.clone();
 
@@ -140,6 +178,9 @@ impl WireTapProxyHandler {
             full_url,
             request_headers: req_headers_list,
             request_body: req_body_str,
+            process_name: proc_name,
+            process_pid: proc_pid,
+            should_record,
         });
 
         let new_req = HyperRequest::from_parts(parts, Body::from(body_bytes));
@@ -176,22 +217,24 @@ impl WireTapProxyHandler {
         };
 
         if let Some(pending) = self.pending.lock().await.pop_front() {
-            let duration_ms = pending.start_time.elapsed().as_millis() as u64;
-            let entry = TrafficEntry::new(
-                pending.method,
-                pending.path,
-                pending.query,
-                pending.full_url,
-                pending.request_headers,
-                pending.request_body,
-                status_u16,
-                status_text,
-                resp_headers_list,
-                resp_body_str,
-                duration_ms,
-                false,
-            );
-            self.store.add(entry).await;
+            if pending.should_record {
+                let duration_ms = pending.start_time.elapsed().as_millis() as u64;
+                let entry = TrafficEntry::new(
+                    pending.method,
+                    pending.path,
+                    pending.query,
+                    pending.full_url,
+                    pending.request_headers,
+                    pending.request_body,
+                    status_u16,
+                    status_text,
+                    resp_headers_list,
+                    resp_body_str,
+                    duration_ms,
+                    false,
+                ).with_process(pending.process_name, pending.process_pid);
+                self.store.add(entry).await;
+            }
         }
 
         HyperResponse::from_parts(parts, Body::from(body_bytes))
@@ -201,10 +244,11 @@ impl WireTapProxyHandler {
 impl HttpHandler for WireTapProxyHandler {
     async fn handle_request(
         &mut self,
-        _ctx: &HttpContext,
+        ctx: &HttpContext,
         req: HyperRequest<Body>,
     ) -> RequestOrResponse {
-        self.process_request(req).await
+        let client_port = ctx.client_addr.port();
+        self.process_request_with_port(req, Some(client_port)).await
     }
 
     async fn handle_response(
@@ -222,25 +266,27 @@ impl HttpHandler for WireTapProxyHandler {
     ) -> HyperResponse<Body> {
         let error_msg = format!("WireTap Proxy Error: Upstream unreachable: {}", err);
         if let Some(pending) = self.pending.lock().await.pop_front() {
-            let duration_ms = pending.start_time.elapsed().as_millis() as u64;
-            let entry = TrafficEntry::new(
-                pending.method,
-                pending.path,
-                pending.query,
-                pending.full_url,
-                pending.request_headers,
-                pending.request_body,
-                502,
-                "Bad Gateway (Upstream Unreachable)".to_string(),
-                vec![KeyValue {
-                    key: "Content-Type".to_string(),
-                    value: "text/plain".to_string(),
-                }],
-                Some(error_msg.clone()),
-                duration_ms,
-                false,
-            );
-            self.store.add(entry).await;
+            if pending.should_record {
+                let duration_ms = pending.start_time.elapsed().as_millis() as u64;
+                let entry = TrafficEntry::new(
+                    pending.method,
+                    pending.path,
+                    pending.query,
+                    pending.full_url,
+                    pending.request_headers,
+                    pending.request_body,
+                    502,
+                    "Bad Gateway (Upstream Unreachable)".to_string(),
+                    vec![KeyValue {
+                        key: "Content-Type".to_string(),
+                        value: "text/plain".to_string(),
+                    }],
+                    Some(error_msg.clone()),
+                    duration_ms,
+                    false,
+                ).with_process(pending.process_name, pending.process_pid);
+                self.store.add(entry).await;
+            }
         }
 
         HyperResponse::builder()
@@ -277,11 +323,12 @@ pub fn build_ca() -> (RcgenAuthority, String) {
 pub async fn start_hudsucker_proxy(
     listen_port: u16,
     target_base_url: Arc<tokio::sync::RwLock<Option<String>>>,
+    target_process: Arc<tokio::sync::RwLock<Option<String>>>,
     store: TrafficStore,
     ca: RcgenAuthority,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], listen_port));
-    let handler = WireTapProxyHandler::new_shared(store, target_base_url);
+    let handler = WireTapProxyHandler::new_shared(store, target_base_url, target_process);
 
     let proxy = Proxy::builder()
         .with_addr(addr)

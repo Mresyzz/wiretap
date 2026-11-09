@@ -9,9 +9,9 @@
 </p>
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![Binary Size](https://img.shields.io/badge/binary_size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap/releases)
+[![Binary Size](https://img.shields.io/badge/size-%3C6MB-brightgreen.svg)](https://github.com/Mresyzz/wiretap)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blueviolet.svg)](#安装与运行)
-[![Tests](https://img.shields.io/badge/tests-18%2F18%20passed-success.svg)](tests/unit_test.rs)
+[![Tests](https://img.shields.io/badge/tests-20%2F20%20passed-success.svg)](tests/unit_test.rs)
 
 WireTap 将透明代理引擎与内置的现代化实时 Web 工作台深度融合。开发者无需安装 Node.js、Docker、Python 环境或注册任何云端账户，单文件直接运行即可在毫秒级内捕获、分析、筛选、修改并重放本地微服务与客户端网络流量。
 
@@ -42,6 +42,7 @@ WireTap 将透明代理引擎与内置的现代化实时 Web 工作台深度融�
 ## 核心特性
 
 - **纯正单二进制产物**：基于纯 Rust（Tokio、Axum、Hudsucker）构建，零外部运行时依赖，冷启动小于 5ms，常驻空闲内存占用小于 10MB。
+- **按进程精准抓包与过滤**：支持选择指定应用程序（如 `chrome.exe`、`node.exe`、`python.exe`）或指定 PID 锁定抓包。透明旁路系统其余无关后台流量，彻底杜绝网络噪音。
 - **本地优先与隐私保护**：所有捕获的请求头、报文体均保存在本地环形内存缓冲区中，不写磁盘临时垃圾，绝无任何遥测或强制登录。
 - **In-Situ 原地重放与 Diff 比对**：在抓包详情抽屉中直接原地编辑 Method、Headers、Body 并重放，实时对比原始响应与重放响应的字段差异。
 - **一键授权脱敏**：分享抓包数据前，一键自动模糊或遮蔽 `Authorization: Bearer`、`Cookie` 等敏感令牌与授权凭证。
@@ -67,13 +68,19 @@ wiretap demo
 wiretap :8080 --to http://localhost:3000
 ```
 
-### 3. 系统代理模式
+### 3. 按进程抓包模式
+仅捕获指定进程（如 Chrome、Node 或 Python）发起的网络请求：
+```bash
+wiretap :8080 --to http://localhost:3000 -p chrome.exe
+```
+
+### 4. 系统代理模式
 接管操作系统的全局 HTTP/HTTPS 代理流量（退出时自动复原系统网络）：
 ```bash
 wiretap :8080 --to http://localhost:3000 --sys
 ```
 
-### 4. Webhook / Mock 接收模式
+### 5. Webhook / Mock 接收模式
 用于无服务状态下接收并检查第三方 Webhook 回调或客户端请求：
 ```bash
 wiretap mock :8080
@@ -84,20 +91,28 @@ wiretap mock :8080
 
 ## 安装与运行
 
-### 1. 预编译单二进制下载
-直接从 [GitHub Releases](https://github.com/Mresyzz/wiretap/releases) 下载对应平台的独立可执行文件，开箱即用，无需配置环境：
-- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
-- **Linux (x86_64)**: `wiretap-linux-x86_64`
-- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
-- **macOS (Intel)**: `wiretap-darwin-x86_64`
-
-### 2. 使用 Cargo 安装
+### 1. 使用 Cargo 安装（推荐）
+通过 Rust 官方包管理器一键安装：
 ```bash
 cargo install --git https://github.com/Mresyzz/wiretap.git
 ```
 
-### 3. 从源码编译
+### 2. 从源码编译
 环境要求：[Rust](https://www.rust-lang.org/) 1.75+
+
+```bash
+git clone https://github.com/Mresyzz/wiretap.git
+cd wiretap
+cargo build --release
+```
+编译产物即为独立单二进制文件 `./target/release/wiretap`（Windows 下为 `wiretap.exe`）。
+
+### 3. 预编译单二进制下载
+亦可直接从 [GitHub Releases](https://github.com/Mresyzz/wiretap/releases) 下载对应平台的独立可执行文件，开箱即用：
+- **Windows (x86_64)**: `wiretap-windows-x86_64.exe`
+- **Linux (x86_64)**: `wiretap-linux-x86_64`
+- **macOS (Apple Silicon)**: `wiretap-darwin-arm64`
+- **macOS (Intel)**: `wiretap-darwin-x86_64`
 
 ```bash
 git clone https://github.com/Mresyzz/wiretap.git

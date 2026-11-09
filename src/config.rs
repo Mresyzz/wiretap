@@ -10,6 +10,8 @@ pub struct WireTapConfig {
     pub target_url: String,
     pub ui_port: u16,
     pub max_history: usize,
+    #[serde(default)]
+    pub target_process: Option<String>,
 }
 
 impl Default for WireTapConfig {
@@ -19,6 +21,7 @@ impl Default for WireTapConfig {
             target_url: "http://localhost:3000".to_string(),
             ui_port: 9090,
             max_history: 1000,
+            target_process: None,
         }
     }
 }

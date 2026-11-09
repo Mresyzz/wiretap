@@ -30,6 +30,8 @@ pub struct TrafficEntry {
     
     pub duration_ms: u64,
     pub is_replay: bool,
+    pub process_name: Option<String>,
+    pub process_pid: Option<u32>,
 }
 
 impl TrafficEntry {
@@ -78,6 +80,14 @@ impl TrafficEntry {
             response_size_bytes,
             duration_ms,
             is_replay,
+            process_name: None,
+            process_pid: None,
         }
+    }
+
+    pub fn with_process(mut self, name: Option<String>, pid: Option<u32>) -> Self {
+        self.process_name = name;
+        self.process_pid = pid;
+        self
     }
 }
